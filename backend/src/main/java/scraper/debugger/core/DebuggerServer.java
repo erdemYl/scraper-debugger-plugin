@@ -16,114 +16,35 @@ import scraper.debugger.dto.FlowMapDTO;
 import scraper.debugger.dto.InstanceDTO;
 import scraper.debugger.dto.NodeDTO;
 
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 import java.lang.System.Logger.Level;
 
 /**
  * Server component of the Debugger.
  */
-public final class DebuggerServer {
+public final class DebuggerServer extends WebSocketServer {
 
     public final System.Logger l = System.getLogger("DebuggerServer");
     private final Logger l2 = LoggerFactory.getLogger("DebuggerServer");
-    private WebSocketServer defaultServer = null;
-    private WebSocket debugger = null;
-    private final ObjectMapper m = new ObjectMapper();
+    private final ReentrantLock lock = new ReentrantLock();
     private final ReentrantLock sendMutex = new ReentrantLock(true);
-    private final DebuggerState STATE;
+    private final ObjectMapper m = new ObjectMapper();
+    private WebSocket debugger = null;
 
     public DebuggerServer(DebuggerState STATE) {
-        this.STATE = STATE;
-    }
-
-
-    @SuppressWarnings("unused")
-    public String getIp() { return DebuggerAddon.bindingIp; }
-    @SuppressWarnings("unused")
-    public int getPort() { return DebuggerAddon.port; }
-
-    /**
-     * Creates a default websocket server instance.
-     */
-    public void create() {
-        if (defaultServer != null) {
-            l2.warn("A server has already created, cannot create another.");
-            return;
-        }
-
-        InetSocketAddress adr = new InetSocketAddress(DebuggerAddon.bindingIp, DebuggerAddon.port);
-
-        defaultServer = new WebSocketServer(adr)
-        {
-            final ReentrantLock lock = new ReentrantLock();
-
-            // only a single debugger allowed to be connected at the same time
-            @Override
-            public ServerHandshakeBuilder onWebsocketHandshakeReceivedAsServer(WebSocket conn, Draft draft, ClientHandshake request) throws InvalidDataException {
-                ServerHandshakeBuilder builder = super.onWebsocketHandshakeReceivedAsServer( conn, draft, request );
-                try {
-                    lock.lock();
-                    if (debugger != null) throw new InvalidDataException(409, "A debugger has already connected");
-                } finally {
-                    lock.unlock();
-                }
-                return builder;
-            }
-
-            @Override
-            public void onOpen(WebSocket conn, ClientHandshake clientHandshake) {
-                try {
-                    lock.lock();
-                    debugger = conn;
-                } finally {
-                    lock.unlock();
-                }
-                l.log(Level.INFO, "Debugger connected");
-            }
-
-            @Override
-            public void onClose(WebSocket conn, int i, String s, boolean b) {
-                try {
-                    lock.lock();
-                    debugger = null;
-                } finally {
-                    lock.unlock();
-                }
-                l.log(Level.WARNING, "Debugger disconnected");
-            }
-
-            @Override
-            public void onMessage(WebSocket conn, String s) {
-                try {
-                    lock.lock();
-                    defaultOnMessage(s, lock);
-                } finally {
-                    if (lock.isHeldByCurrentThread()) lock.unlock();
-                }
-            }
-
-            @Override
-            public void onError(WebSocket conn, Exception e) {
-                // NYI
-            }
-
-            @Override
-            public void onStart() {
-                // NYI
-            }
-        };
-
-        defaultServer.setReuseAddr(true);
+        super(new InetSocketAddress(DebuggerAddon.bindingIp, DebuggerAddon.port));
+        setReuseAddr(true);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            Thread.currentThread().setName("DebuggerShutDown");
             try {
                 l2.warn("Shutting down system");
                 STATE.setContinue();
                 stop();
-                // why only slf4j logger prints this?
+                // Why only slf4j logger prints this?
                 l2.warn("Graceful shutdown");
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -132,64 +53,70 @@ public final class DebuggerServer {
     }
 
 
-    /**
-     * Creates server instance from given value.
-     */
-    @SuppressWarnings("unused")
-    public void create(WebSocketServer server) throws InvalidDataException {
-        if (defaultServer != null) {
-            throw new InvalidDataException(409, "A server has already created");
+    // only a single debugger allowed to be connected at the same time
+    @Override
+    public ServerHandshakeBuilder onWebsocketHandshakeReceivedAsServer(WebSocket conn, Draft draft, ClientHandshake request) throws InvalidDataException {
+        ServerHandshakeBuilder builder = super.onWebsocketHandshakeReceivedAsServer( conn, draft, request );
+        try {
+            lock.lock();
+            if (debugger != null) throw new InvalidDataException(409, "A debugger has already connected");
+        } finally {
+            lock.unlock();
         }
+        return builder;
+    }
 
-        defaultServer = server;
+    @Override
+    public void onOpen(WebSocket conn, ClientHandshake clientHandshake) {
+        try {
+            lock.lock();
+            debugger = conn;
+        } finally {
+            lock.unlock();
+        }
+        l.log(Level.INFO, "Debugger connected");
+    }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                l2.warn("Shutting down system");
-                STATE.setContinue();
-                stop();
-                l2.warn("Graceful shutdown");
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+    @Override
+    public void onClose(WebSocket conn, int i, String s, boolean b) {
+        try {
+            lock.lock();
+            debugger = null;
+        } finally {
+            lock.unlock();
+        }
+        l.log(Level.WARNING, "Debugger disconnected");
+    }
+
+    @Override
+    public void onMessage(WebSocket conn, String msg) {
+        try {
+            lock.lock();
+            Map<String, String> request = m.readValue(msg, Map.class);
+            String cmd = request.get("request");
+            switch (cmd) {
+                case "stepSelected", "resumeSelected", "stopSelected", "setBreakpoint" -> {
+                    Method m = DebuggerActions.class.getMethod(cmd, String.class);
+                    m.invoke(DebuggerAddon.ACTIONS, request.get("content"));
+                }
+                default -> {
+                    Method m = DebuggerActions.class.getDeclaredMethod(cmd);
+                    m.invoke(DebuggerAddon.ACTIONS);
+                }
             }
-        }));
-    }
-
-
-    /**
-     * Starts created server.
-     */
-    public void start() {
-        if (defaultServer != null) {
-            defaultServer.start();
-        } else {
-            l2.warn("Server cannot start: create a server first.");
+        } catch (Exception e) {
+            l.log(Level.WARNING, "Invalid message detected from front-end.");
+        } finally {
+            lock.unlock();
         }
     }
 
-
-    public void stop() throws InterruptedException {
-        if (defaultServer != null) {
-            defaultServer.stop();
-        }
+    @Override
+    public void onError(WebSocket conn, Exception e) {
     }
 
-
-    /**
-     * API convention: call this method in your websocket server when a debugger connects.
-     * @throws InvalidDataException if a debugger has already connected.
-     */
-    @SuppressWarnings("unused")
-    public void connected(WebSocket conn) throws InvalidDataException {
-        if (debugger != null) throw new InvalidDataException(409, "A debugger has already connected");
-        else debugger = conn;
-    }
-
-
-    // returns a socket, if a scraper.debugger.client is connected
-    @SuppressWarnings("unused")
-    public Optional<WebSocket> getFrontend() {
-        return Optional.ofNullable(debugger);
+    @Override
+    public void onStart() {
     }
 
 
@@ -199,12 +126,12 @@ public final class DebuggerServer {
     //=============
 
     /**
-     * Wraps with type "Specification".
+     * Wraps with type "specification".
      */
     public void sendSpecification(InstanceDTO spec, ControlFlowGraphDTO cfg) {
         if (debugger != null) {
             try {
-                debugger.send(wrap("Specification",
+                debugger.send(wrap("specification",
                         Map.of("spec", m.writeValueAsString(spec),
                                 "cfg", m.writeValueAsString(cfg))));
             } catch (JsonProcessingException e) {
@@ -215,14 +142,14 @@ public final class DebuggerServer {
 
 
     /**
-     * Wraps with types "Initial" or "Update".
+     * Wraps with types "initialFlow" or "flow".
      */
     public void sendIdentifiedFlow(NodeDTO n, FlowMapDTO o, boolean initial) {
         try {
             // Why need a mutex again although this method always called with another lock?
             sendMutex.lock();
             if (debugger != null) {
-                String t = initial ? "Initial" : "Update";
+                String t = initial ? "initialFlow" : "flow";
                 try {
                     debugger.send(wrap(t, Map.of(
                             "node", m.writeValueAsString(n),
@@ -239,14 +166,14 @@ public final class DebuggerServer {
 
 
     /**
-     * Wraps with type "Breakpoint"
+     * Wraps with type "breakpointHit"
      */
     public void sendBreakpointHit(NodeDTO n, FlowMapDTO o) {
         try {
             sendMutex.lock();
             if (debugger != null) {
                 try {
-                    debugger.send(wrap("Breakpoint", Map.of(
+                    debugger.send(wrap("breakpointHit", Map.of(
                             "node", m.writeValueAsString(n),
                             "flow", m.writeValueAsString(o))
                     ));
@@ -261,7 +188,7 @@ public final class DebuggerServer {
 
 
     /**
-     * Wraps with type "EndNodeFlow".
+     * Wraps with type "finishedFlow".
      */
     public void sendFinishedFlow(NodeDTO n, FlowMapDTO o, boolean endNodeFlow) {
         try {
@@ -269,16 +196,13 @@ public final class DebuggerServer {
             if (endNodeFlow) {
                 if (debugger != null) {
                     try {
-                        debugger.send(wrap("EndNodeFlow", Map.of(
+                        debugger.send(wrap("finishedFlow", Map.of(
                                 "flow", m.writeValueAsString(o))
                         ));
                     } catch (JsonProcessingException e) {
                         e.printStackTrace();
                     }
                 }
-            }
-            else {
-                // NYI
             }
         } finally {
             sendMutex.unlock();
@@ -287,68 +211,11 @@ public final class DebuggerServer {
 
 
     /**
-     * Wraps with type "Log".
+     * Wraps with type "log".
      */
     public void sendLogMessage(String formattedMsg) {
         if (debugger != null) {
-            debugger.send(wrap("Log", formattedMsg));
-        }
-    }
-
-
-    /**
-     * Default message handler for default server.
-     * Assumes that messages come from default scraper.debugger.client.
-     */
-    private void defaultOnMessage(String msg, ReentrantLock toUnlock) {
-        try {
-            Map<String, String> request = m.readValue(msg, Map.class);
-            switch (request.get("request")) {
-                case "RequestSpec" -> {
-                    DebuggerAddon.ACTIONS.requestSpecification();
-                }
-                case "Execute" -> {
-                    DebuggerAddon.ACTIONS.setReady();
-                }
-                case "BeforeBP" -> {
-                    DebuggerAddon.ACTIONS.setBreakpoint(request.get("content"), true);
-                }
-                case "AfterBP" -> {
-                    DebuggerAddon.ACTIONS.setBreakpoint(request.get("content"), false);
-                }
-                case "Granted" -> {
-                    // requested flow has permission to continue
-                    DebuggerAddon.ACTIONS.permit(request.get("content"));
-                }
-                case "NotGranted" -> {
-                    // requested flow prohibited its continue
-                    DebuggerAddon.ACTIONS.notPermit(request.get("content"));
-                }
-                case "ContinueExecAll" -> {
-                    DebuggerAddon.ACTIONS.permitAll();
-                    DebuggerAddon.ACTIONS.continueExec();
-                }
-                case "ContinueExec" -> {
-                    // program execution continues
-                    DebuggerAddon.ACTIONS.continueExec();
-                }
-                case "StopExec" -> {
-                    // program execution stops
-                    toUnlock.unlock();
-                    DebuggerAddon.ACTIONS.stopExec();
-                }
-                case "StepAll" -> {
-                    DebuggerAddon.ACTIONS.stepAll();
-                    DebuggerAddon.ACTIONS.continueExec();
-                }
-                case "StepFlow" -> {
-                    DebuggerAddon.ACTIONS.stepSelected(request.get("content"));
-                }
-                default -> l.log(Level.WARNING, "Unexpected Request: {0}", request.get("request"));
-            }
-
-        } catch (JsonProcessingException e) {
-            l.log(Level.WARNING, "Unable to read a message from frontend. (Bad message format)");
+            debugger.send(wrap("log", formattedMsg));
         }
     }
 

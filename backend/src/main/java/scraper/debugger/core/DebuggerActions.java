@@ -13,22 +13,22 @@ public final class DebuggerActions {
     public final System.Logger l = System.getLogger("Debugger");
     private final System.Logger.Level info = System.Logger.Level.INFO;
 
+    // Frontend left-messages
     private final LeftMessages leftMessages;
 
-    // debugger components
-    private final DebuggerState STATE;
+    // Debugger components
     private final DebuggerServer SERVER;
+    private final DebuggerState STATE;
     private final FlowIdentifier FI;
     private final FlowPermissions FP;
 
-    public DebuggerActions(DebuggerState STATE, DebuggerServer SERVER, FlowIdentifier FI, FlowPermissions FP) {
-        this.STATE = STATE;
+    public DebuggerActions(DebuggerServer SERVER, DebuggerState STATE, FlowIdentifier FI, FlowPermissions FP) {
         this.SERVER = SERVER;
+        this.STATE = STATE;
         this.FI = FI;
         this.FP = FP;
         leftMessages = new LeftMessages(FP);
     }
-
 
     private static final class LeftMessages {
 
@@ -85,6 +85,7 @@ public final class DebuggerActions {
         ABORT
     }
 
+
     void checkLeftMessages(UUID id) {
         leftMessages.consumeMsgFor(id);
     }
@@ -106,23 +107,22 @@ public final class DebuggerActions {
     public void requestSpecification() {
         // Note that debugger can handle only one specification
         l.log(info, "Requesting specification");
-        SERVER.sendSpecification(
-                DebuggerHook.spec.getKey(), DebuggerHook.spec.getValue());
+        SERVER.sendSpecification(DebuggerHook.spec.getKey(), DebuggerHook.spec.getValue());
     }
 
-    public void setReady() {
-        STATE.setReady(true);
+    public void startExecution() {
+        STATE.setStart();
     }
 
-    public void setBreakpoint(String address, boolean b) {
-        STATE.addBreakpoint(address, b);
+    public void setBreakpoint(String address) {
+        STATE.addBreakpoint(address);
     }
 
-    public void continueExec() {
+    public void continueExecution() {
         STATE.setContinue();
     }
 
-    public void stopExec() {
+    public void stopExecution() {
         try {
             STATE.BARGE_IN.lock();
             FP.removeAll();
@@ -137,6 +137,7 @@ public final class DebuggerActions {
             leftMessages.addStopMsg(id);
             FP.create(id);
         });
+        continueExecution();
     }
 
     public void stepSelected(String uuid) {
@@ -145,16 +146,21 @@ public final class DebuggerActions {
         FP.create(id);
     }
 
-    public void permitAll() {
+    public void resumeAll() {
         FI.forEachIdentified(FP::create);
     }
 
-    public void permit(String uuid) {
+    public void resumeSelected(String uuid) {
         FP.create(UUID.fromString(uuid));
     }
 
-    public void notPermit(String uuid) {
+    public void stopSelected(String uuid) {
         FP.remove(UUID.fromString(uuid));
+    }
+
+    public void resumeAllContinueExecution() {
+        resumeAll();
+        continueExecution();
     }
 
     @Override

@@ -12,7 +12,6 @@ import scraper.debugger.dto.NodeDTO;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -29,7 +28,7 @@ public class DebuggerWebsocket extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake serverHandshake) {
-        send(wrap("RequestSpec", ""));
+        send(wrap("requestSpecification", ""));
     }
 
     @Override
@@ -39,41 +38,29 @@ public class DebuggerWebsocket extends WebSocketClient {
             Map<String, Object> data = m.readValue(s, Map.class);
             String type = (String) data.get("type");
             switch (type) {
-                case "Specification" -> {
+                case "specification" -> {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
                     InstanceDTO i = m.readValue(dto.get("spec"), InstanceDTO.class);
                     ControlFlowGraphDTO cfg = m.readValue(dto.get("cfg"), ControlFlowGraphDTO.class);
                     debugger.takeSpecification(i, cfg);
                 }
-                case "Initial" -> {
+                case "initialFlow" -> {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
                     debugger.takeInitialUpdate(m.readValue(dto.get("node"), NodeDTO.class), m.readValue(dto.get("flow"), FlowMapDTO.class));
                 }
-                case "Update" -> {
+                case "flow" -> {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
                     debugger.takeUpdate(m.readValue(dto.get("node"), NodeDTO.class), m.readValue(dto.get("flow"), FlowMapDTO.class));
                 }
-                case "Instant" -> {
-                    Map<String, String> dto = (Map<String, String>) data.get("data");
-                    LinkedHashMap<NodeDTO, FlowMapDTO> finalData = new LinkedHashMap<>();
-                    for (int i = 0; i < dto.size(); i++) {
-                        try {
-                            finalData.put(m.readValue(dto.get("node" + i), NodeDTO.class), m.readValue(dto.get("flow" + i), FlowMapDTO.class));
-                        } catch (Exception e) {
-                            break;
-                        }
-                    }
-                    debugger.takeInstantUpdate(finalData);
-                }
-                case "Breakpoint" -> {
+                case "breakpointHit" -> {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
                     debugger.takeBreakpointUpdate(m.readValue(dto.get("flow"), FlowMapDTO.class));
                 }
-                case "EndNodeFlow" -> {
+                case "finishedFlow" -> {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
                     debugger.takeProcessedEndNodeFlow(m.readValue(dto.get("flow"), FlowMapDTO.class));
                 }
-                case "Log" -> {
+                case "log" -> {
                     String log = (String) data.get("data");
                     debugger.takeLogMessage(log);
                 }
@@ -95,36 +82,36 @@ public class DebuggerWebsocket extends WebSocketClient {
 
     }
 
-    public void sendExecute() {
-        send(wrap("Execute", ""));
+    public void sendStartExecution() {
+        send(wrap("startExecution", ""));
     }
 
     public void sendBreakpoint(String addrRepresentation, boolean b) {
-        send(wrap(b ? "BeforeBP" : "AfterBP", addrRepresentation));
+        send(wrap("setBreakpoint", addrRepresentation));
     }
 
-    public void sendPermission(String flow, boolean permission) {
-        send(wrap(permission ? "Granted" : "NotGranted", flow));
+    public void sendResumeSelected(String flow, boolean permission) {
+        send(wrap(permission ? "resumeSelected" : "stopSelected", flow));
     }
 
-    public void sendContinueExec() {
-        send(wrap("ContinueExec", ""));
+    public void sendContinueExecution() {
+        send(wrap("continueExecution", ""));
     }
 
     public void sendContinueExecAll() {
-        send(wrap("ContinueExecAll", ""));
+        send(wrap("resumeAllContinueExecution", ""));
     }
 
     public void sendStepAll() {
-        send(wrap("StepAll", "Stop"));
+        send(wrap("stepAll", "Stop"));
     }
 
     public void sendStepFlow(String flowID) {
-        send(wrap("StepFlow", flowID));
+        send(wrap("stepSelected", flowID));
     }
 
     public void sendStopAll() {
-        send(wrap("StopExec", ""));
+        send(wrap("stopExecution", ""));
     }
 
     private String wrap(String request, Object content) {

@@ -2,8 +2,9 @@ package scraper.debugger.addon;
 
 import scraper.annotations.NotNull;
 import scraper.api.*;
-import scraper.debugger.core.DebuggerNodeHook;
 import scraper.debugger.core.DebuggerServer;
+import scraper.debugger.core.FlowFilter;
+import scraper.debugger.core.FlowIdentifier;
 import scraper.debugger.dto.ControlFlowGraphDTO;
 import scraper.debugger.dto.InstanceDTO;
 import scraper.plugins.core.flowgraph.FlowUtil;
@@ -19,14 +20,13 @@ import java.util.Map.Entry;
  * Executed after default hooks like type checker hook.
  * Can handle only one scrape job.
  */
-public final class DebuggerHook implements Hook {
+public class DebuggerHook implements Hook {
 
     // Logger with actually intended name
     public final System.Logger l = System.getLogger("Debugger");
     private final System.Logger.Level info = System.Logger.Level.INFO;
 
     public static Entry<InstanceDTO, ControlFlowGraphDTO> spec;
-    public static Set<String> endNodes;
 
     @Override
     public void execute(@NotNull DIContainer dependencies, @NotNull String[] args, @NotNull Map<ScrapeSpecification, ScrapeInstance> scraper) {
@@ -48,15 +48,17 @@ public final class DebuggerHook implements Hook {
                     } else throw new RuntimeException("Debugger needs an entry node!");
                 });
 
-                endNodes = spec.getValue().getEndNodes();
-
                 if (debug) {
-                    DebuggerNodeHook NODE_HOOK = dependencies.get(DebuggerNodeHook.class);
                     DebuggerServer SERVER = dependencies.get(DebuggerServer.class);
 
+                    DebuggerNodeHook NODE_HOOK = new DebuggerNodeHook(
+                            SERVER,
+                            dependencies.get(FlowIdentifier.class),
+                            dependencies.get(FlowFilter.class),
+                            spec.getValue().getEndNodes()
+                    );
                     scraper.values().forEach(i -> i.getHooks().add(NODE_HOOK));
 
-                    SERVER.create();
                     SERVER.start();
                     return;
                 }
@@ -77,6 +79,6 @@ public final class DebuggerHook implements Hook {
 
     @Override
     public String toString() {
-        return "Debugger";
+        return "DebuggerHook";
     }
 }

@@ -49,10 +49,6 @@ public class DebuggerApp extends Application {
         displayController.generateBeforeExecTree(ins, cfg);
     }
 
-    public void takeInstantUpdate(LinkedHashMap<NodeDTO, FlowMapDTO> dto) {
-        // NYI
-    }
-
     public void takeInitialUpdate(NodeDTO n, FlowMapDTO o) {
         displayController.addRootNode(n, o);
     }
@@ -92,7 +88,7 @@ public class DebuggerApp extends Application {
             if (socket.getConnection().isOpen()) {
                 if (!started.get()) {
                     started.set(true);
-                    socket.sendExecute();
+                    socket.sendStartExecution();
                 }
             }
         } finally {
@@ -105,7 +101,7 @@ public class DebuggerApp extends Application {
     }
 
     public void sendContinueExec() {
-        socket.sendContinueExec();
+        socket.sendContinueExecution();
     }
 
     public void sendContinueExecAll() {
@@ -113,7 +109,7 @@ public class DebuggerApp extends Application {
     }
 
     public void sendContinueFlow(String flowID) {
-        socket.sendPermission(flowID, true);
+        socket.sendResumeSelected(flowID, true);
     }
 
     public void sendStepAll() {
@@ -125,7 +121,7 @@ public class DebuggerApp extends Application {
     }
 
     public void sendStopFlow(String flowID) {
-        socket.sendPermission(flowID, false);
+        socket.sendResumeSelected(flowID, false);
     }
 
     public void sendStopAllFlow() {
