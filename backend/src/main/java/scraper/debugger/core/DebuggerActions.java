@@ -6,6 +6,8 @@ import scraper.debugger.addon.DebuggerHook;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import scraper.debugger.core.FlowIdentifier.LifecycleFilter;
+
 
 public final class DebuggerActions {
 
@@ -104,64 +106,95 @@ public final class DebuggerActions {
     // CLIENT API
     //==============
 
-    public void requestSpecification() {
+    void requestSpecification() {
         // Note that debugger can handle only one specification
         l.log(info, "Requesting specification");
-        SERVER.sendSpecification(DebuggerHook.spec.getKey(), DebuggerHook.spec.getValue());
+        SERVER.sendSpecification(DebuggerHook.getJobInstance(), DebuggerHook.getJobCFG());
     }
 
-    public void startExecution() {
+    void startExecution() {
         STATE.setStart();
     }
 
-    public void setBreakpoint(String address) {
+    void setBreakpoint(String address) {
         STATE.addBreakpoint(address);
     }
 
-    public void continueExecution() {
+    void continueExecution() {
         STATE.setContinue();
     }
 
-    public void stopExecution() {
+    void stopExecution() {
         try {
             STATE.BARGE_IN.lock();
             FP.removeAll();
-        } finally {
             STATE.l.log(info, "ALL FLOWS STOPPED");
+        } finally {
             STATE.BARGE_IN.unlock();
         }
     }
 
-    public void stepAll() {
+    void stepAll() {
         FI.forEachIdentified(id -> {
             leftMessages.addStopMsg(id);
             FP.create(id);
         });
-        continueExecution();
     }
 
-    public void stepSelected(String uuid) {
-        UUID id = UUID.fromString(uuid);
+    void stepSelected(String ident) {
+        UUID id = FI.toUUID(ident);
         leftMessages.addStopMsg(id);
         FP.create(id);
     }
 
-    public void resumeAll() {
+    void resumeAll() {
         FI.forEachIdentified(FP::create);
     }
 
-    public void resumeSelected(String uuid) {
-        FP.create(UUID.fromString(uuid));
+    void resumeSelected(String ident) {
+        FP.create(FI.toUUID(ident));
     }
 
-    public void stopSelected(String uuid) {
-        FP.remove(UUID.fromString(uuid));
+    void stopSelected(String ident) {
+        FP.remove(FI.toUUID(ident));
     }
 
-    public void resumeAllContinueExecution() {
+    void stepAllContinueExecution() {
+        stepAll();
+        continueExecution();
+    }
+
+    void resumeAllContinueExecution() {
         resumeAll();
         continueExecution();
     }
+
+
+    //============
+    // QUERY API
+    //============
+
+    void queryWholeLifecycle(String ident) {
+        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.NORMAL, ident));
+    }
+
+    void queryToEmitterNodes(String ident) {
+        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.TO_FLOW_EMITTER, ident));
+    }
+
+    void queryToEmitterNotForkNodes(String ident) {
+        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.TO_FLOW_EMITTER_NOT_FORK, ident));
+    }
+
+    void queryToForkNodes(String ident) {
+        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.TO_FORK, ident));
+    }
+
+    void queryNotToEmitterNodes(String ident) {
+        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.NOT_TO_FLOW_EMITTER, ident));
+
+    }
+
 
     @Override
     public String toString() {

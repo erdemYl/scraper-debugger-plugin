@@ -1,12 +1,10 @@
 package scraper.debugger.core;
 
 import scraper.api.*;
-import scraper.debugger.dto.FlowMapDTO;
+import scraper.debugger.dto.FlowDTO;
 import scraper.debugger.dto.NodeDTO;
 
-import java.util.AbstractMap;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.UUID;
 import java.lang.System.Logger.Level;
 
@@ -29,16 +27,14 @@ public class FlowFilter {
     }
 
     public void filter(NodeContainer<? extends Node> n, FlowMap o) {
-        Optional<UUID> parent = o.getParentId();
+        UUID parent = o.getParentId().orElse(null);
         UUID id = o.getId();
-        boolean parentPermission = parent.isEmpty()
-                || FP.permitted(parent.get())
-                || !FI.exists(parent.get());
+        boolean parentPermitted = parent == null || FP.exists(parent) || !FI.exists(parent);
 
         boolean step = false;
 
         // check permission, inherited from parent
-        if (!parentPermission) {
+        if (!parentPermitted) {
             FP.remove(id);
             step = true;
         } else {
@@ -48,16 +44,16 @@ public class FlowFilter {
             }
         }
 
-        if (FP.notPermitted(id)) {
+        if (!FP.exists(id)) {
             String format = step ? "STEP -> {0}" : "BREAKPOINT -> {0}";
+
             STATE.waitOnBreakpoint(() -> {
                 STATE.l.log(Level.INFO, format, n.getAddress().getRepresentation());
-                Entry<NodeDTO, FlowMapDTO> dto = getDTOs(n, o);
-                SERVER.sendBreakpointHit(dto.getKey(), dto.getValue());
+                SERVER.sendBreakpointHit(FI.getDTO(id));
                 FI.releaseBranchLock(id);
             });
 
-            while(FP.notPermitted(id)) {
+            while(!FP.exists(id)) {
                 STATE.waitOnBreakpoint();
             }
 
@@ -89,13 +85,12 @@ public class FlowFilter {
             catch (Exception any) {
                 FP.remove(id);
                 STATE.waitOnBreakpoint(() -> {
-                    ACTIONS.l.log(System.Logger.Level.INFO, "{0} in {1}", any.getMessage(), adr);
-                    Entry<NodeDTO, FlowMapDTO> dto = getDTOs(n, o);
-                    if (sendBreak) SERVER.sendBreakpointHit(dto.getKey(), dto.getValue());
+                    ACTIONS.l.log(Level.INFO, "{0} in {1}", any.getMessage(), adr);
+                    if (sendBreak) SERVER.sendBreakpointHit(FI.getDTO(id));
                     FI.releaseBranchLock(id);
                 });
 
-                while (FP.notPermitted(id) && !ACTIONS.checkChangeOrAbortMsg(id)) {
+                while (!FP.exists(id) && !ACTIONS.checkChangeOrAbortMsg(id)) {
                     // waits until node change or abort
                     STATE.waitOnBreakpoint();
                 }
@@ -106,23 +101,6 @@ public class FlowFilter {
                 checkException(n, o, false);
             }
         }
-    }
-
-
-    public Entry<NodeDTO, FlowMapDTO> getDTOs(NodeContainer<? extends Node> n, FlowMap o) {
-        UUID id = o.getId();
-        Optional<UUID> parent = o.getParentId();
-        String pIdent = parent.isEmpty() ? "" : FI.getExact(parent.get());
-
-        NodeDTO dto1 = new NodeDTO(n);
-        FlowMapDTO dto2 = new FlowMapDTO(
-                o,
-                FI.getExact(id),
-                pIdent,
-                FI.treeLevelOf(id),
-                FlowIdentifier.FlowTo.get(n)
-        );
-        return new AbstractMap.SimpleImmutableEntry<>(dto1, dto2);
     }
 
     public String toString() {

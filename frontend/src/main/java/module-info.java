@@ -1,7 +1,7 @@
 import scraper.api.Hook;
-import scraper.debugger.hook.FrontendHook;
+import scraper.debugger.frontend.hook.*;
 
-module debugger.frontend {
+open module debugger.frontend {
     requires scraper.api;
     requires scraper.utils;
 
@@ -24,9 +24,9 @@ module debugger.frontend {
     // backend
     requires debugger.backend;
 
-    exports scraper.debugger.hook;
-    exports scraper.debugger.mvcvm;
-    opens scraper.debugger.mvcvm;
+    exports scraper.debugger.frontend.api;
+    exports scraper.debugger.frontend.hook;
+    exports scraper.debugger.frontend.core;
 
     provides Hook with FrontendHook;
 }

@@ -1,4 +1,4 @@
-package scraper.debugger.graph;
+package scraper.debugger.tree;
 
 import java.util.*;
 
@@ -16,8 +16,9 @@ import java.util.*;
  * @param <V> is the type of the stored values.
  */
 public class Trie<V> implements MapI<String, V> {
-    private final TrieNode headNode;
+    private final TrieNode<V> headNode;
     private final Set<String> keys;
+    private static final int INITIAL_RADIX_LENGTH = 4;
     private int size;
 
     /* Whether keys will be stored explicitly in a set or not. */
@@ -27,13 +28,13 @@ public class Trie<V> implements MapI<String, V> {
 
 
     public Trie() {
-        headNode = new TrieNode(new HashMap<>());
+        headNode = new TrieNode<>(new HashMap<>(INITIAL_RADIX_LENGTH));
         keys = null;
         storeKeys = false;
     }
 
     public Trie(boolean storeKeys) {
-        headNode = new TrieNode(new HashMap<>());
+        headNode = new TrieNode<>(new HashMap<>(INITIAL_RADIX_LENGTH));
         keys = storeKeys ? new HashSet<>() : null;
         size = 0;
         this.storeKeys = storeKeys;
@@ -63,7 +64,7 @@ public class Trie<V> implements MapI<String, V> {
                 }
                 //return value of the end state, if automaton stops in an end state
                 return node.isEndNode()
-                        ? ((EndNode) node).getValue()
+                        ? ((EndNode<V>) node).getValue()
                         : null;
 
             } catch (NoStateFound e) {
@@ -101,21 +102,21 @@ public class Trie<V> implements MapI<String, V> {
 
                 if (n.isEndNode()) {
                     // change value of the node
-                    ((EndNode) n).setValue(value);
+                    ((EndNode<V>) n).setValue(value);
                 } else {
                     // change TrieNode to EndNode and store value
-                    n = ((TrieNode) n).toEndNode(value);
+                    n = ((TrieNode<V>) n).toEndNode(value);
                     // then add new transition to previous node
                     prevNode.transitionAdd(chars[i], n);
                 }
             } catch (NoStateFound e) {
                 while (i < length - 1) {
-                    Node<V> node = new TrieNode(new HashMap<>());
+                    Node<V> node = new TrieNode<>(new HashMap<>(INITIAL_RADIX_LENGTH));
                     n.transitionAdd(chars[i], node);
                     n = node;
                     i++;
                 }
-                EndNode end = new EndNode(value, new HashMap<>());
+                EndNode<V> end = new EndNode<>(value, new HashMap<>(INITIAL_RADIX_LENGTH));
                 n.transitionAdd(chars[i], end);
             }
         }
@@ -157,7 +158,7 @@ public class Trie<V> implements MapI<String, V> {
                         // change the transition in previous state
                         prevNode.transitionAdd(
                                 input[i],
-                                ((EndNode) node).toTrieNode()
+                                ((EndNode<V>) node).toTrieNode()
                         );
                     }
                 }
@@ -277,7 +278,7 @@ public class Trie<V> implements MapI<String, V> {
 
                             // check if the end state is reached
                             if (node.isEndNode()) {
-                                set.add(((EndNode) node).value);
+                                set.add(((EndNode<V>) node).value);
                                 break;
                             }
                         }
@@ -306,7 +307,7 @@ public class Trie<V> implements MapI<String, V> {
                 try {
                     n = n.shift(c);
                     if (n.isEndNode()) {
-                        values.add(((EndNode) n).getValue());
+                        values.add(((EndNode<V>) n).getValue());
                     }
                 } catch (NoStateFound e) {
                     // given key is not available
@@ -320,8 +321,8 @@ public class Trie<V> implements MapI<String, V> {
     @SuppressWarnings("Duplicates")
     public List<String> getDirectChildKeysOf(String key) {
         synchronized (mutex) {
+            if (key == null) return List.of();
             List<String> children = new LinkedList<>();
-            if (key == null) return children;
 
             char[] input = key.toCharArray();
             Node<V> n = headNode;
@@ -350,8 +351,8 @@ public class Trie<V> implements MapI<String, V> {
     @SuppressWarnings("Duplicates")
     public List<V> getDirectChildValuesOf(String key) {
         synchronized (mutex) {
+            if (key == null) return List.of();
             List<V> children = new ArrayList<>();
-            if (key == null) return children;
 
             char[] input = key.toCharArray();
             Node<V> n = headNode;
@@ -364,7 +365,7 @@ public class Trie<V> implements MapI<String, V> {
             }
             if (n.isEndNode()) {
                 n.getTransitions().forEach((ch, node) -> {
-                    if (node.isEndNode()) children.add(((EndNode) node).value);
+                    if (node.isEndNode()) children.add(((EndNode<V>) node).value);
                     else {
                         children.addAll(findDirectEndNodesVALUE(node));
                     }
@@ -381,13 +382,13 @@ public class Trie<V> implements MapI<String, V> {
 
             char[] input = key.toCharArray();
             Node<V> n = headNode;
-            EndNode longest = null;
+            EndNode<V> longest = null;
             int last = 0;
             for (int i = 0; i < input.length; i++) {
                 try {
                     n = n.shift(input[i]);
                     if (n.isEndNode()) {
-                        longest = (EndNode) n;
+                        longest = (EndNode<V>) n;
                         last = i;
                     }
                 } catch (NoStateFound e) {
@@ -433,7 +434,7 @@ public class Trie<V> implements MapI<String, V> {
     private List<V> findDirectEndNodesVALUE(Node<V> n) {
         List<V> ends = new ArrayList<>();
         n.getTransitions().forEach((ch, node) -> {
-            if (node.isEndNode()) ends.add(((EndNode) node).value);
+            if (node.isEndNode()) ends.add(((EndNode<V>) node).value);
             else ends.addAll(findDirectEndNodesVALUE(node));
         });
         return ends.stream().toList();
@@ -487,7 +488,7 @@ public class Trie<V> implements MapI<String, V> {
     private Set<V> gatherValuesHelper(String prefix, Node<V> start) {
         Set<V> set = new HashSet<>();
         if (start.isEndNode()) {
-            set.add(((EndNode) start).value);
+            set.add(((EndNode<V>) start).value);
         }
         start.getTransitions().forEach((ch, n) -> set.addAll(gatherValuesHelper(prefix + ch, n)));
         return set;
@@ -510,23 +511,23 @@ public class Trie<V> implements MapI<String, V> {
      *
      * @param <V> is a generic type.
      */
-    private interface Node<V> {
-        boolean isEndNode();
+    private static abstract class Node<V> {
+        abstract boolean isEndNode();
 
-        void transitionAdd(Character ch, Node<V> next);
+        abstract void transitionAdd(Character ch, Node<V> next);
 
-        void transitionDelete(Character ch);
+        abstract void transitionDelete(Character ch);
 
-        Map<Character, Node<V>> getTransitions();
+        abstract Map<Character, Node<V>> getTransitions();
 
-        Node<V> shift(Character ch) throws NoStateFound;
+        abstract Node<V> shift(Character ch) throws NoStateFound;
     }
 
 
     /**
      * Represents the end nodes in TrieMap.
      */
-    private final class EndNode implements Node<V> {
+    private static final class EndNode<V> extends Node<V> {
         private V value;
 
         /**
@@ -574,8 +575,8 @@ public class Trie<V> implements MapI<String, V> {
          *
          * @return a new TrieNode.
          */
-        TrieNode toTrieNode() {
-            return new TrieNode(transitions);
+        TrieNode<V> toTrieNode() {
+            return new TrieNode<>(transitions);
         }
 
         V getValue() {
@@ -591,7 +592,7 @@ public class Trie<V> implements MapI<String, V> {
     /**
      * Represents nodes except end nodes in TrieMap.
      */
-    private final class TrieNode implements Node<V> {
+    private static final class TrieNode<V> extends Node<V> {
 
         /**
          * Map of character transitions from this node to other nodes.
@@ -643,8 +644,8 @@ public class Trie<V> implements MapI<String, V> {
          * @param value is the given value to store with key.
          * @return a new EndNode.
          */
-        EndNode toEndNode(V value) {
-            return new EndNode(value, this.transitions);
+        EndNode<V> toEndNode(V value) {
+            return new EndNode<>(value, this.transitions);
         }
     }
 }

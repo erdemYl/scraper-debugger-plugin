@@ -7,28 +7,22 @@ import scraper.api.NodeHook;
 import scraper.debugger.core.DebuggerServer;
 import scraper.debugger.core.FlowFilter;
 import scraper.debugger.core.FlowIdentifier;
-import scraper.debugger.dto.FlowMapDTO;
-import scraper.debugger.dto.NodeDTO;
+import scraper.debugger.dto.FlowDTO;
 
-import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.logging.*;
 
 public class DebuggerNodeHook implements NodeHook {
 
-    // Debugger components
-    private final DebuggerServer SERVER;
     private final FlowIdentifier FI;
     private final FlowFilter FF;
 
-    private final Set<String> endNodes;
     private final Handler redirect;
 
-    DebuggerNodeHook(DebuggerServer SERVER, FlowIdentifier FI, FlowFilter FF, Set<String> endNodes) {
-        this.SERVER = SERVER;
+    DebuggerNodeHook(DebuggerServer SERVER, FlowIdentifier FI, FlowFilter FF) {
         this.FI = FI;
         this.FF = FF;
-        this.endNodes = endNodes;
 
         redirect = new Handler() {
             final Formatter formatter = new SimpleFormatter();
@@ -50,17 +44,13 @@ public class DebuggerNodeHook implements NodeHook {
 
     @Override
     public void beforeProcess(NodeContainer<? extends Node> n, FlowMap o) {
-        FI.identify(n, o, true);
+        FI.identify(n, o);
         redirectLogToFrontend(n);
         FF.filter(n, o);
     }
 
     @Override
     public void afterProcess(NodeContainer<? extends Node> n, FlowMap o) {
-        if (isEndNode(n)) {
-            Map.Entry<NodeDTO, FlowMapDTO> dto = FF.getDTOs(n, o);
-            SERVER.sendFinishedFlow(dto.getKey(), dto.getValue(), true);
-        }
         FI.releaseBranchLock(o.getId());
     }
 
@@ -75,10 +65,6 @@ public class DebuggerNodeHook implements NodeHook {
             l.setUseParentHandlers(false);
             l.addHandler(redirect);
         }
-    }
-
-    private boolean isEndNode(NodeContainer<? extends Node> n) {
-        return endNodes.contains(n.getAddress().toString());
     }
 
     @Override

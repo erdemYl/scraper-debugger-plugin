@@ -28,6 +28,6 @@ public class NodeDTO {
 
     public NodeDTO(NodeContainer<? extends Node> n) {
         this.nodeConfiguration = n.getNodeConfiguration();
-        this.address = n.getAddress().toString();
+        this.address = n.getAddress().getRepresentation();
     }
 }

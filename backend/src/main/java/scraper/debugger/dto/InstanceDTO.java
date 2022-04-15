@@ -11,8 +11,8 @@ public class InstanceDTO {
     private String name;
     private String entry;
     private Map<String, Object> entryArguments;
-    private Map<String, InstanceDTO> importedInstances = new HashMap<>();
-    private Map<String, NodeDTO> routes = new HashMap<>();
+    private final Map<String, InstanceDTO> importedInstances = new HashMap<>();
+    private final Map<String, NodeDTO> routes = new HashMap<>();
 
     public String getEntry() { return entry; }
     public String getName() { return name; }
@@ -30,11 +30,11 @@ public class InstanceDTO {
         this.entryArguments = i.getEntryArguments();
 
         if(i.getEntry().isPresent()) {
-            this.entry = i.getEntry().get().getAddress().toString();
+            this.entry = i.getEntry().get().getAddress().getRepresentation();
         } else {
             this.entry = null;
         }
-        i.getRoutes().forEach((address, nodeContainer) -> routes.put(address.toString(), new NodeDTO(nodeContainer)));
+        i.getRoutes().forEach((address, nodeContainer) -> routes.put(address.getRepresentation(), new NodeDTO(nodeContainer)));
         i.getImportedInstances().forEach((adr, impl) -> importedInstances.put(adr.toString(), new InstanceDTO(impl)));
     }
 }

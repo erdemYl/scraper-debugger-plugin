@@ -20,12 +20,8 @@ public class FlowPermissions {
         permittedFlows.clear();
     }
 
-    boolean permitted(UUID id) {
+    public boolean exists(UUID id) {
         return permittedFlows.contains(id);
-    }
-
-    boolean notPermitted(UUID id) {
-        return !permitted(id);
     }
 
     @Override

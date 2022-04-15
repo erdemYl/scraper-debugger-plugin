@@ -9,11 +9,11 @@ import java.util.*;
 @SuppressWarnings("unused") // DTO
 public class ControlFlowGraphDTO {
 
-    private Map<String, Set<String>> outgoingAdrMap = new HashMap<>();
-    private Set<String> endNodes = new HashSet<>();
+    private final Map<String, Set<String>> outgoingAddressMap = new HashMap<>();
+    private final Set<String> endNodes = new HashSet<>();
     private String start;
 
-    public Map<String, Set<String>> getOutgoingAdrMap() { return outgoingAdrMap; }
+    public Map<String, Set<String>> getOutgoingAddressMap() { return outgoingAddressMap; }
     public Set<String> getEndNodes() { return endNodes; }
     public String getStart() { return start; }
 
@@ -33,9 +33,9 @@ public class ControlFlowGraphDTO {
                 goes.add(out.getToAddress().getRepresentation());
             }
 
-            if (goes.isEmpty()) endNodes.add("<" + adr + ">");
+            if (goes.isEmpty()) endNodes.add(adr);
 
-            outgoingAdrMap.put(adr, goes);
+            outgoingAddressMap.put(adr, goes);
         });
     }
 }
