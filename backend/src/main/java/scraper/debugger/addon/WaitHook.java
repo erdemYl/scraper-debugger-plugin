@@ -16,13 +16,13 @@ import java.util.Map;
  * Executed as last hook if debugging activated.
  * Stops all flows and waits for a ready signal from frontend.
  */
-public final class WaitHook implements Hook {
+public class WaitHook implements Hook {
 
     @Override
     public void execute(@NotNull DIContainer dependencies, @NotNull String[] args, @NotNull Map<ScrapeSpecification, ScrapeInstance> scraper)  {
         if (StringUtil.getArgument(args, "debug") != null) {
             DebuggerState STATE = dependencies.get(DebuggerState.class);
-            STATE.waitUntilReady();
+            STATE.waitUntilStart();
         }
     }
 
@@ -33,6 +33,6 @@ public final class WaitHook implements Hook {
 
     @Override
     public String toString() {
-        return "Debugger";
+        return "DebuggerWaitHook";
     }
 }

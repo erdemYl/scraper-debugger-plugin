@@ -1,161 +1,93 @@
 package scraper.debugger.core;
 
-import scraper.api.FlowMap;
-import scraper.api.Node;
-import scraper.api.NodeContainer;
-import scraper.debugger.dto.FlowMapDTO;
-import scraper.debugger.dto.NodeDTO;
-import scraper.debugger.graph.Trie;
+import scraper.api.*;
+import scraper.debugger.dto.FlowDTO;
+import scraper.debugger.tree.Trie;
 
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import static scraper.debugger.addon.DebuggerHook.getNodeType;
 
 
+public class FlowIdentifier {
 
-public final class FlowIdentifier {
-
-    // Stores each identified flow
+    // Every identified flow
     private final Map<UUID, IdentifiedFlow> identifiedFlows = new ConcurrentHashMap<>();
 
-    // Tree structure of identified flows
-    private final Trie<UUID> treeStructure = new Trie<>();
 
-    // Stores flow updates to be sent
-    private final Map<UUID, Runnable> flowUpdates = new ConcurrentHashMap<>();
+    // Quasi-static flow tree
+    private final Trie<IdentifiedFlow> quasiStaticTree = new Trie<>();
 
-    // Default lock provider
+
+    // Branch lock provider
     private final LockProvider lockProvider = new LockProvider();
 
+
     // Debugger components
-    private final DebuggerState STATE;
     private final DebuggerServer SERVER;
+    private final DebuggerState STATE;
     private final FlowPermissions FP;
 
-    public FlowIdentifier(DebuggerState STATE, DebuggerServer SERVER, FlowPermissions FP) {
-        this.STATE = STATE;
+
+    public FlowIdentifier(DebuggerServer SERVER, DebuggerState STATE, FlowPermissions FP) {
         this.SERVER = SERVER;
+        this.STATE = STATE;
         this.FP = FP;
     }
 
 
     private static class IdentifiedFlow {
-        final String identification;
-        final boolean toFlowOpener;
-        final boolean toFork;
+
+        final UUID id;
+
+        /** Identification of this flow */
+        final String ident;
+
+        /**  Transfer object */
+        final FlowDTO toSent;
+
+        /** Whether this flow is flowing to a node, which can emit new flows */
+        final boolean toFlowEmitterNode;
+
+        /** Whether this flow is flowing to a fork node */
+        final boolean toForkNode;
+
         int postfix = 0;
 
-        IdentifiedFlow(String identification, FlowTo flowTo) {
-            this.identification = identification;
-            toFlowOpener = flowTo.isFlowOpener();
-            toFork = flowTo.isFork();
+        IdentifiedFlow(String ident, String pIdent, NodeContainer<? extends Node> n, FlowMap o) {
+            NodeAddress address = n.getAddress();
+            this.id = o.getId();
+            toSent = new FlowDTO(ident, pIdent, address, o);
+            this.ident = ident;
+            toFlowEmitterNode = getNodeType(address).isFlowEmitter();
+            toForkNode = getNodeType(address).isFork();
         }
 
-        String nextPostfix() {
-            String post = toFlowOpener ? postfix + "." : String.valueOf(postfix);
+        synchronized String next() {
+            String post = toFlowEmitterNode
+                    ? ident + postfix + "."
+                    : ident + postfix;
             postfix++;
             return post;
         }
     }
 
 
-    public enum FlowTo {
-        FORK, INT_RANGE, MAP, ON_WAY;
-
-        boolean isFlowOpener() {
-            switch (this) {
-                case FORK, MAP, INT_RANGE -> {
-                    return true;
-                }
-                default -> {
-                    return false;
-                }
-            }
-        }
-
-        boolean openerAndNotFork() {
-            switch (this) {
-                case MAP, INT_RANGE -> {
-                    return true;
-                }
-                default -> {
-                    return false;
-                }
-            }
-        }
-
-        boolean isFork() {
-            return this.equals(FORK);
-        }
-
-        public static FlowTo get(NodeContainer<? extends Node> n) {
-            Optional<?> t = n.getKeySpec("type");
-            String nodeType = t.isEmpty()
-                    ? (String) n.getKeySpec("f").get()
-                    : (String) t.get();
-            switch (nodeType) {
-                case "Fork" -> {
-                    return FlowTo.FORK;
-                }
-                case "Map" -> {
-                    return FlowTo.MAP;
-                }
-                case "IntRange" -> {
-                    return FlowTo.INT_RANGE;
-                }
-                default -> {
-                    return FlowTo.ON_WAY;
-                }
-            }
-        }
-    }
-
-
-    public static class IdentificationScheduler {
-        private final Queue<Entry<UUID, Object>> mutexes = new ConcurrentLinkedQueue<>();
-        private final ReentrantLock sequenceMutex;
-
-        private IdentificationScheduler(ReentrantLock sequenceMutex) {
-            this.sequenceMutex = sequenceMutex;
-        }
-
-        public void enqueue(UUID id, Runnable with, boolean wait) {
-            try {
-                sequenceMutex.lock();
-                Object mutex = new Object();
-                mutexes.add(new AbstractMap.SimpleImmutableEntry<>(id, mutex));
-                synchronized (mutex) {
-                    with.run();
-                    sequenceMutex.unlock();
-                    if (wait) {
-                        try {mutex.wait();} catch (InterruptedException e) {e.printStackTrace();}
-                    }
-                }
-            } finally {
-                if (sequenceMutex.isHeldByCurrentThread()) sequenceMutex.unlock();
-            }
-        }
-
-        public void dequeue() {
-            if (!mutexes.isEmpty()) {
-                Object mutex = mutexes.poll();
-                synchronized (mutex) {
-                    mutex.notify();
-                }
-            }
-        }
-    }
-
-
-    public static class LockProvider {
-        private final Trie<ReentrantLock> locks;
+    private static class LockProvider {
+        private final Trie<Lock> locks;
+        private final Lock defaultLock;
 
         private LockProvider() {
             locks = new Trie<>();
-            locks.put("i", new ReentrantLock(true));   // default lock
+            defaultLock = new ReentrantLock(true);
+            locks.put("i", defaultLock);
         }
 
         public void generateLock(String ident) {
@@ -164,65 +96,62 @@ public final class FlowIdentifier {
 
 
         public void lock(String ident) {
-            ReentrantLock lock;
+            Lock l;
             if (ident.startsWith("i")) {
-                lock = locks.getLongestMatchedEntry(ident).getValue();
+                l = locks.getLongestMatchedEntry(ident).getValue();
             } else {
-                lock = locks.get("i");
+                l = defaultLock;
             }
-            lock.lock();
+            l.lock();
         }
 
         public void unlock(String ident) {
-            ReentrantLock lock;
+            Lock l;
             if (ident.startsWith("i")) {
-                lock = locks.getLongestMatchedEntry(ident).getValue();
+                l = locks.getLongestMatchedEntry(ident).getValue();
             } else {
-                lock = locks.get("i");
+                l = defaultLock;
             }
-            if (lock.isHeldByCurrentThread()) lock.unlock();
+            l.unlock();
         }
     }
 
 
-    public IdentificationScheduler newScheduler(ReentrantLock sequenceMutex) {
-        return new IdentificationScheduler(sequenceMutex);
+
+    //=============
+    // Identify
+    //=============
+
+    public void identify(NodeContainer<? extends Node> n, FlowMap o) {
+
+        // each flow initially has permission
+        FP.create(o.getId());
+
+        IdentifiedFlow f = identifyNew(n, o);
+        SERVER.sendIdentifiedFlow(f.toSent);
     }
 
+    private IdentifiedFlow identifyNew(NodeContainer<? extends Node> n, FlowMap o) {
+        UUID parent = o.getParentId().orElse(null);
+        UUID id = o.getId();
 
-    public LockProvider newLockProvider() {
-        return new LockProvider();
-    }
+        String ident;
+        IdentifiedFlow flow;
 
-
-    /**
-     * Implicitly uses branch lock. Make sure that "releaseBranchLock" is used
-     * after this method called. Otherwise, branch lock remains locked.
-     */
-    public void identify(NodeContainer<? extends Node> n, FlowMap o, boolean send) {
-        try {
-            STATE.BARGE_IN.lock();
-
-            FlowMap o2 = o.copy();
-            UUID id = o2.getId();
-            identifyNew(n, o2);
-            acquireBranchLock(id);
-            if (send) sendIdentified(id);
-
-        } catch (Exception e) {
-            STATE.l.log(System.Logger.Level.WARNING, "A flow in node {0} cannot be identified.", n.getAddress().toString());
-        } finally {
-            STATE.BARGE_IN.unlock();
+        if (parent == null || !exists(parent)) {
+            // initial flow
+            ident = "i";
+            flow = new IdentifiedFlow("i", "", n, o);
+        } else {
+            IdentifiedFlow pFlow = identifiedFlows.get(parent);
+            ident =  pFlow.next();
+            flow = new IdentifiedFlow(ident, pFlow.ident, n, o);
+            if (pFlow.toForkNode) lockProvider.generateLock(ident);
         }
-    }
 
-
-    public boolean sendIdentified(UUID id) {
-        Runnable r = flowUpdates.get(id);
-        if (r == null) return false;
-        flowUpdates.remove(id);
-        r.run();
-        return true;
+        identifiedFlows.put(id, flow);
+        quasiStaticTree.put(ident, flow);
+        return flow;
     }
 
 
@@ -231,9 +160,7 @@ public final class FlowIdentifier {
         lockProvider.lock(ident);
     }
 
-    /**
-     * Use together with "identify".
-     */
+
     public void releaseBranchLock(UUID id) {
         String ident = getOptional(id).orElse("i");
         lockProvider.unlock(ident);
@@ -250,7 +177,7 @@ public final class FlowIdentifier {
     public Optional<String> getOptional(UUID id) {
         if (id == null) return Optional.empty();
         IdentifiedFlow f = identifiedFlows.get(id);
-        return f == null ? Optional.empty() : Optional.of(f.identification);
+        return f == null ? Optional.empty() : Optional.of(f.ident);
     }
 
     /**
@@ -259,71 +186,89 @@ public final class FlowIdentifier {
      */
     public String getExact(UUID id) {
         IdentifiedFlow f = identifiedFlows.get(id);
-        return f == null ? "" : f.identification;
-    }
-
-    /**
-     * A query method. Returns all parent ids (with right sequence) of given flow id.
-     * Assumes that parent flows also identified.
-     * Otherwise, returns an empty set.
-     */
-    public List<UUID> getLifecycle(UUID id) {
-        return treeStructure.getValuesOn(getExact(id));
+        return f == null ? "" : f.ident;
     }
 
     public boolean exists(UUID id) {
         return identifiedFlows.containsKey(id);
     }
 
-    private void identifyNew(NodeContainer<? extends Node> n, FlowMap o) {
-        Optional<UUID> parent = o.getParentId();
-        UUID id = o.getId();
-        FP.create(id);
-        FlowTo flowTo = FlowTo.get(n);
-        Runnable update;
-
-        if (parent.isEmpty() || !identifiedFlows.containsKey(parent.get())) {
-            // initial flow, no identified parent
-            IdentifiedFlow init = new IdentifiedFlow("i", flowTo);
-            identifiedFlows.put(id, init);
-            treeStructure.put("i", id);
-            update = () -> SERVER.sendIdentifiedFlow(
-                    new NodeDTO(n),
-                    new FlowMapDTO(o, "i", "_", 0, flowTo),
-                    true
-            );
-        } else {
-            UUID parentId = parent.get();
-            IdentifiedFlow parentFlow = identifiedFlows.get(parentId);
-            String pIdent = parentFlow.identification;
-            String ident =  pIdent + parentFlow.nextPostfix();
-
-            identifiedFlows.put(id, new IdentifiedFlow(ident, flowTo));
-            treeStructure.put(ident, id);
-
-            update = () -> SERVER.sendIdentifiedFlow(
-                    new NodeDTO(n),
-                    new FlowMapDTO(o, ident, pIdent, treeLevelOf(ident), flowTo),
-                    false
-            );
-
-            if (parentFlow.toFork) lockProvider.generateLock(ident);
-        }
-
-        flowUpdates.put(id, update);
-    }
-
     public int treeLevelOf(UUID id) {
         IdentifiedFlow f = identifiedFlows.get(id);
-        return f == null ? 0 : treeLevelOf(f.identification);
+        return f == null ? 0 : treeLevelOf(f.ident);
     }
 
+    public FlowDTO getDTO(UUID id) {
+        IdentifiedFlow f = identifiedFlows.get(id);
+        return f == null ? null : f.toSent;
+    }
+
+    UUID toUUID(String ident) {
+        IdentifiedFlow f = quasiStaticTree.get(ident);
+        return f == null ? null : f.id;
+    }
+
+
+    //=============
+    // Lifecycle
+    //=============
+
+    enum LifecycleFilter {
+        NORMAL,                    // all lifecycle
+        TO_FLOW_EMITTER,           // flow to nodes that introduce new flows
+        TO_FLOW_EMITTER_NOT_FORK,  // flow to nodes that introduce new flows except fork nodes
+        TO_FORK,                   // flow to fork node
+        NOT_TO_FLOW_EMITTER        // flow to nodes that do not introduce new flows
+    }
+
+    Deque<FlowDTO> getLifecycle(LifecycleFilter filter, String ident) {
+        switch (filter) {
+            case NORMAL -> {
+                return quasiStaticTree.getValuesOn(ident)
+                        .stream()
+                        .map(f -> f.toSent)
+                        .collect(Collectors.toCollection(LinkedList::new));
+            }
+            case TO_FLOW_EMITTER -> {
+                return quasiStaticTree.getValuesOn(ident)
+                        .stream()
+                        .filter(f -> f.toFlowEmitterNode)
+                        .map(f -> f.toSent)
+                        .collect(Collectors.toCollection(LinkedList::new));
+            }
+            case TO_FLOW_EMITTER_NOT_FORK -> {
+                return quasiStaticTree.getValuesOn(ident)
+                        .stream()
+                        .filter(f -> f.toFlowEmitterNode && !f.toForkNode)
+                        .map(f -> f.toSent)
+                        .collect(Collectors.toCollection(LinkedList::new));
+            }
+            case TO_FORK -> {
+                return quasiStaticTree.getValuesOn(ident)
+                        .stream()
+                        .filter(f -> f.toForkNode)
+                        .map(f -> f.toSent)
+                        .collect(Collectors.toCollection(LinkedList::new));
+            }
+            case NOT_TO_FLOW_EMITTER -> {
+                return quasiStaticTree.getValuesOn(ident)
+                        .stream()
+                        .filter(f -> !f.toFlowEmitterNode)
+                        .map(f -> f.toSent)
+                        .collect(Collectors.toCollection(LinkedList::new));
+            }
+        }
+        return new LinkedList<>();
+    }
+
+
+
     private int treeLevelOf(String ident) {
-        return treeStructure.getValuesOn(ident).size() - 1;
+        return quasiStaticTree.getValuesOn(ident).size() - 1;
     }
 
     @Override
     public String toString() {
-        return "FlowIdentifier";
+        return "DebuggerFlowIdentifier";
     }
 }

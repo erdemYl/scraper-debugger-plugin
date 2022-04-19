@@ -24,7 +24,7 @@ open module debugger.backend {
 
     exports scraper.debugger.core;
     exports scraper.debugger.dto;
-    exports scraper.debugger.graph;
+    exports scraper.debugger.tree;
 
     provides Addon with DebuggerAddon;
     provides Hook with DebuggerHook, WaitHook;

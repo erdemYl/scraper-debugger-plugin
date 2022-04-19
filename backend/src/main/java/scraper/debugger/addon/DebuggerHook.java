@@ -2,8 +2,9 @@ package scraper.debugger.addon;
 
 import scraper.annotations.NotNull;
 import scraper.api.*;
-import scraper.debugger.core.DebuggerNodeHook;
 import scraper.debugger.core.DebuggerServer;
+import scraper.debugger.core.FlowFilter;
+import scraper.debugger.core.FlowIdentifier;
 import scraper.debugger.dto.ControlFlowGraphDTO;
 import scraper.debugger.dto.InstanceDTO;
 import scraper.plugins.core.flowgraph.FlowUtil;
@@ -11,22 +12,21 @@ import scraper.plugins.core.flowgraph.api.ControlFlowGraph;
 import scraper.utils.StringUtil;
 
 import java.util.*;
-import java.util.Map.Entry;
-
 
 /**
  * Provided to scraper framework.
  * Executed after default hooks like type checker hook.
  * Can handle only one scrape job.
  */
-public final class DebuggerHook implements Hook {
+public class DebuggerHook implements Hook {
 
     // Logger with actually intended name
     public final System.Logger l = System.getLogger("Debugger");
     private final System.Logger.Level info = System.Logger.Level.INFO;
 
-    public static Entry<InstanceDTO, ControlFlowGraphDTO> spec;
-    public static Set<String> endNodes;
+    private static InstanceDTO jobInstance;
+    private static ControlFlowGraphDTO jobCFG;
+    private static final Map<NodeAddress, NodeType> debuggerNodeTypes = new HashMap<>();
 
     @Override
     public void execute(@NotNull DIContainer dependencies, @NotNull String[] args, @NotNull Map<ScrapeSpecification, ScrapeInstance> scraper) {
@@ -37,31 +37,83 @@ public final class DebuggerHook implements Hook {
             if (scraper.size() != 1) {
                 throw new RuntimeException("Debugger can handle only one job!");
             } else {
-                scraper.forEach((s, i) -> {
-                    ControlFlowGraph cfg = FlowUtil.generateControlFlowGraph(i);
-                    if (i.getEntry().isPresent()) {
-                        Address adr = i.getEntry().get().getAddress();
-                        spec = new AbstractMap.SimpleImmutableEntry<>(
-                                new InstanceDTO(i),
-                                new ControlFlowGraphDTO(cfg, adr)
-                        );
+                scraper.forEach((spec, ins) -> {
+                    ControlFlowGraph cfg = FlowUtil.generateControlFlowGraph(ins);
+                    if (ins.getEntry().isPresent()) {
+                        Address adr = ins.getEntry().get().getAddress();
+                        jobInstance = new InstanceDTO(ins);
+                        jobCFG = new ControlFlowGraphDTO(cfg, adr);
                     } else throw new RuntimeException("Debugger needs an entry node!");
+
+                    ins.getRoutes().values().forEach(n -> {
+                        debuggerNodeTypes.put(n.getAddress(), NodeType.of(n));
+                    });
                 });
 
-                endNodes = spec.getValue().getEndNodes();
-
                 if (debug) {
-                    DebuggerNodeHook NODE_HOOK = dependencies.get(DebuggerNodeHook.class);
                     DebuggerServer SERVER = dependencies.get(DebuggerServer.class);
 
+                    DebuggerNodeHook NODE_HOOK = new DebuggerNodeHook(
+                            SERVER,
+                            dependencies.get(FlowIdentifier.class),
+                            dependencies.get(FlowFilter.class)
+                    );
                     scraper.values().forEach(i -> i.getHooks().add(NODE_HOOK));
 
-                    SERVER.create();
                     SERVER.start();
                     return;
                 }
 
                 l.log(info, "Debugger hook executed");
+            }
+        }
+    }
+
+    public static InstanceDTO getJobInstance() { return jobInstance; }
+
+    public static ControlFlowGraphDTO getJobCFG() { return jobCFG; }
+
+    public static NodeType getNodeType(NodeAddress address) {
+        return debuggerNodeTypes.get(address);
+    }
+
+
+    public enum NodeType {
+        FORK, INT_RANGE, MAP, ON_WAY;
+
+        public boolean isFlowEmitter() {
+            switch (this) {
+                case FORK, INT_RANGE, MAP -> {
+                    return true;
+                }
+                default -> {
+                    return false;
+                }
+            }
+        }
+
+        public boolean isFork() {
+            return this.equals(FORK);
+        }
+
+        private static NodeType of(NodeContainer<? extends Node> n) {
+            Optional<?> t = n.getKeySpec("type");
+            String nodeType = t.isEmpty()
+                    ? (String) n.getKeySpec("f").get()
+                    : (String) t.get();
+            switch (nodeType) {
+                case "Fork" -> {
+                    return NodeType.FORK;
+                }
+                case "Map" -> {
+                    return NodeType.MAP;
+                }
+                case "IntRange" -> {
+                    return NodeType.INT_RANGE;
+                }
+                default -> {
+                    return NodeType.ON_WAY;
+                }
             }
         }
     }
@@ -77,6 +129,6 @@ public final class DebuggerHook implements Hook {
 
     @Override
     public String toString() {
-        return "Debugger";
+        return "DebuggerHook";
     }
 }

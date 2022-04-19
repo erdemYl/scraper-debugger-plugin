@@ -10,89 +10,69 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public final class DebuggerState {
 
-    public final System.Logger l = System.getLogger("DebuggerState");
-    public final ReentrantLock BARGE_IN = new ReentrantLock(true);
+    final System.Logger l = System.getLogger("DebuggerState");
+    final ReentrantLock BARGE_IN = new ReentrantLock(true);
 
     // flows will wait on this object
-    private static final AtomicBoolean breaking = new AtomicBoolean(false);
-    private static final AtomicBoolean ready = new AtomicBoolean(false);
+    private final Object breaking = new Object();
+    private final AtomicBoolean start = new AtomicBoolean(false);
 
-    private static final Set<String> breakpointsBefore = new HashSet<>();
-    private static final Set<String> breakpointsAfter = new HashSet<>();
+    private final Set<String> breakpoints = new HashSet<>();
 
-    public DebuggerState() {
-    }
-
-    public void waitUntilReady() {
-        try {
-            synchronized (ready) {
-                if(!ready.get()) {
+    public void waitUntilStart() {
+        synchronized (start) {
+            try {
+                if (!start.get()) {
                     l.log(Level.INFO, "Waiting for debugger to connect");
-                    ready.wait();
+                    start.wait();
                 }
-            }
-        } catch (Exception ignored) {}
-    }
-
-    public void setReady(boolean b) {
-        synchronized (ready) {
-            ready.set(true);
-
-            // if ready, notify every flow to wake up
-            if (b) ready.notifyAll();
+            } catch (Exception ignored) {}
         }
     }
 
-    public void waitOnBreakpoint(Runnable onWait, Runnable onCont) {
-        synchronized (breaking) {
-            try {
-                onWait.run();
-                breaking.wait();
-                onCont.run();
-            } catch (InterruptedException e) {
-                l.log(Level.INFO, "Continuing because interrupt");
-            }
+    void setStart() {
+        synchronized (start) {
+            start.set(true);
+            start.notifyAll();
         }
-    }
-
-    public void waitOnBreakpoint(Runnable onWait) {
-        synchronized (breaking) {
-            try {
-                onWait.run();
-                breaking.wait();
-            } catch (InterruptedException e) {
-                l.log(Level.INFO, "Continuing because interrupt");
-            }
-        }
-    }
-
-    public void waitOnBreakpoint() {
-        synchronized (breaking) {
-            try {
-                breaking.wait();
-            } catch (InterruptedException e) {
-                l.log(Level.INFO, "Continuing because interrupt");
-            }
-        }
-    }
-
-    public boolean isBreakpoint(NodeAddress address, boolean beforeBP) {
-        String a = address.getRepresentation();
-        return beforeBP ? breakpointsBefore.contains(a) : breakpointsAfter.contains(a);
     }
 
     /**
      * All flows with permission will continue
      */
-    public void setContinue() {
+    void setContinue() {
         synchronized (breaking) {
             breaking.notifyAll();
         }
     }
 
-    public void addBreakpoint(String br, boolean b) {
-        if (b) breakpointsBefore.add(br);
-        else breakpointsAfter.add(br);
+    void waitOnBreakpoint(Runnable onWait) {
+        synchronized (breaking) {
+            try {
+                onWait.run();
+                breaking.wait();
+            } catch (InterruptedException e) {
+                l.log(Level.INFO, "Continuing because interrupt");
+            }
+        }
+    }
+
+    void waitOnBreakpoint() {
+        synchronized (breaking) {
+            try {
+                breaking.wait();
+            } catch (InterruptedException e) {
+                l.log(Level.INFO, "Continuing because interrupt");
+            }
+        }
+    }
+
+    boolean isBreakpoint(NodeAddress address) {
+        return breakpoints.contains(address.getRepresentation());
+    }
+
+    void addBreakpoint(String address) {
+        breakpoints.add(address);
     }
 
     @Override

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.shape.Polygon?>
+<?import javafx.scene.shape.Rectangle?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="550.0" prefWidth="900.0" style="-fx-background-color: wheat;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="scraper.debugger.frontend.core.FrontendController">
+   <children>
+      <Rectangle arcHeight="5.0" arcWidth="5.0" fill="BURLYWOOD" height="56.0" stroke="#896436" strokeType="INSIDE" strokeWidth="5.0" width="900.0" />
+      <Label alignment="CENTER" layoutX="24.0" layoutY="12.0" prefHeight="32.0" prefWidth="123.0" text="Debugger:">
+         <font>
+            <Font name="System Bold" size="22.0" />
+         </font>
+      </Label>
+      <Label fx:id="buttonConnect" alignment="CENTER" layoutX="147.0" layoutY="13.0" onMouseClicked="#buttonConnectClicked" prefHeight="30.0" prefWidth="123.0" text="Disconnected" underline="true">
+         <font>
+            <Font size="18.0" />
+         </font>
+      </Label>
+      <Label fx:id="buttonExit" alignment="CENTER" layoutX="829.0" layoutY="13.0" onMouseClicked="#buttonExitClicked" prefHeight="30.0" prefWidth="57.0" text="Exit">
+         <font>
+            <Font name="System Bold" size="18.0" />
+         </font>
+      </Label>
+      <TreeView fx:id="specificationTreeView" editable="true" fixedCellSize="30.0" layoutY="56.0" prefHeight="494.0" prefWidth="245.0" />
+      <ScrollPane fx:id="logScrollPane" hbarPolicy="NEVER" layoutY="56.0" prefHeight="494.0" prefWidth="245.0" visible="false" vmax="0.0">
+         <content>
+            <TextArea fx:id="logTextArea" editable="false" prefHeight="492.0" prefWidth="500.0" scrollLeft="50.0" scrollTop="50.0" text="----------                                                                                                                                       Log ----------                                                                                                                                    " wrapText="true">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font>
+            </TextArea>
+         </content>
+      </ScrollPane>
+      <Region disable="true" layoutY="56.0" opacity="0.3" prefHeight="494.0" prefWidth="245.0" style="-fx-background-color: cornsilk;" />
+      <SplitPane dividerPositions="0.993231046931408" layoutX="280.0" layoutY="56.0" orientation="VERTICAL" prefHeight="494.0" prefWidth="620.0">
+        <items>
+          <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="485.0" prefWidth="614.0" style="-fx-background-color: white;">
+               <children>
+                  <ScrollPane hbarPolicy="NEVER" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="330.0" prefWidth="618.0" vbarPolicy="NEVER">
+                    <content>
+                      <AnchorPane fx:id="dynamicFlowTree" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="0.0" minWidth="0.0" prefHeight="1000.0" prefWidth="2000.0" style="-fx-background-color: cornsilk;" />
+                    </content>
+                  </ScrollPane>
+                  <TableView fx:id="valueTable" layoutY="327.0" prefHeight="158.0" prefWidth="618.0" translateY="3.0" />
+                  <ListView fx:id="flowMapList" layoutY="355.0" prefHeight="132.0" prefWidth="309.0" />
+                  <Region layoutX="309.0" layoutY="331.0" opacity="0.2" prefHeight="24.0" prefWidth="309.0" style="-fx-background-color: orange;" />
+                  <Label fx:id="flowMapLabel" alignment="CENTER" layoutY="330.0" prefHeight="25.0" prefWidth="309.0" style="-fx-background-color: burlywood; -fx-border-width: 2; -fx-border-color: #896436;" text="Flow Map">
+                     <font>
+                        <Font name="System Bold" size="14.0" />
+                     </font>
+                  </Label>
+               </children>
+            </AnchorPane>
+          <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="618.0" />
+        </items>
+      </SplitPane>
+      <Label fx:id="buttonScraper" alignment="CENTER" layoutX="388.0" layoutY="19.0" onMouseClicked="#buttonScraperClicked" prefHeight="17.0" prefWidth="123.0" style="-fx-background-color: cornsilk;" text="Scraper DevTool" textFill="#827e78" translateY="-1.0">
+         <font>
+            <Font name="System Bold" size="14.0" />
+         </font>
+      </Label>
+      <Pane fx:id="buttonStepSelected" layoutX="251.0" layoutY="435.0" maxHeight="-Infinity" maxWidth="-Infinity" onMouseClicked="#buttonStepSelectedClicked" opacity="0.3" prefHeight="24.0" prefWidth="24.0" rotate="-90.0" style="-fx-background-color: burlywood; -fx-border-color: #896436; -fx-border-width: 2;">
+         <children>
+            <Polygon fill="#896436" layoutX="-46.0" layoutY="-42.0" points="65.33331298828125, 65.00009155273438, 53.666717529296875, 65.00009155273438, 65.33334350585938, 53.00006103515625" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" translateY="-4.0" />
+            <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#896436" height="5.0" layoutX="4.0" layoutY="8.0" rotate="45.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" translateY="1.0" width="15.0" />
+         </children>
+      </Pane>
+      <Pane fx:id="buttonContinueSelected" layoutX="251.0" layoutY="471.0" maxHeight="-Infinity" maxWidth="-Infinity" onMouseClicked="#buttonContinueSelectedClicked" opacity="0.3" prefHeight="24.0" prefWidth="24.0" rotate="-45.0" style="-fx-background-color: burlywood; -fx-border-color: #896436; -fx-border-width: 2;">
+         <children>
+            <Polygon fill="#896436" layoutX="-47.0" layoutY="-42.0" points="65.33331298828125, 65.00009155273438, 53.666717529296875, 65.00009155273438, 65.33334350585938, 53.00006103515625" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" translateY="-4.0" />
+            <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#896436" height="5.0" layoutX="4.0" layoutY="9.0" rotate="45.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" translateY="1.0" width="15.0" />
+         </children>
+      </Pane>
+      <AnchorPane fx:id="buttonLog" layoutX="246.0" layoutY="330.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" onMouseClicked="#buttonLogClicked" prefHeight="34.0" prefWidth="34.0">
+         <children>
+            <Circle fill="BURLYWOOD" layoutX="17.0" layoutY="17.0" radius="17.0" stroke="#896436" strokeType="INSIDE" strokeWidth="2.0" />
+            <Label alignment="CENTER" prefHeight="34.0" prefWidth="34.0" text="Log">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font>
+            </Label>
+         </children>
+      </AnchorPane>
+      <AnchorPane fx:id="buttonContinueFlowsInNode" layoutX="246.0" layoutY="285.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" onMouseClicked="#buttonContinueFlowsInNodeClicked" prefHeight="34.0" prefWidth="34.0">
+         <children>
+            <Circle fill="BURLYWOOD" layoutX="17.0" layoutY="17.0" radius="17.0" stroke="#896436" strokeType="INSIDE" strokeWidth="2.0" />
+            <Rectangle arcHeight="4.0" arcWidth="4.0" fill="#896436" height="7.0" layoutX="8.0" layoutY="14.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="12.0" />
+            <Polygon fill="#896436" layoutX="17.0" layoutY="18.0" points="1.0, 9.20001220703125, 11.000015258789062, -1.4000091552734375, 1.0000152587890625, -11.0" stroke="WHITE" strokeType="INSIDE" strokeWidth="0.0" />
+         </children>
+      </AnchorPane>
+      <AnchorPane fx:id="buttonStepAllContinueExecution" layoutX="246.0" layoutY="240.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" onMouseClicked="#buttonStepAllContinueExecutionClicked" prefHeight="34.0" prefWidth="34.0">
+         <children>
+            <Circle fill="BURLYWOOD" layoutX="17.0" layoutY="17.0" radius="17.0" stroke="#896436" strokeType="INSIDE" strokeWidth="2.0" />
+            <Label alignment="CENTER" layoutX="4.0" layoutY="5.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="22.0" prefWidth="28.0" text="Step">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font>
+            </Label>
+         </children>
+      </AnchorPane>
+      <AnchorPane layoutX="246.0" layoutY="195.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="34.0" prefWidth="34.0">
+         <children>
+            <Circle fill="BURLYWOOD" layoutX="17.0" layoutY="17.0" radius="17.0" stroke="#896436" strokeType="INSIDE" strokeWidth="2.0" />
+            <Pane fx:id="buttonContinueExecution" onMouseClicked="#buttonContinueExecutionClicked" prefHeight="34.0" prefWidth="34.0">
+               <children>
+                  <Polygon fill="#896436" layoutX="12.0" layoutY="21.0" points="0.0, 5.5333251953125, 14.0, -3.533355712890625, 0.0, -13.933319091796875" stroke="WHITE" strokeType="INSIDE" strokeWidth="0.0" />
+               </children>
+            </Pane>
+            <Pane fx:id="buttonStopExecution" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" onMouseClicked="#buttonStopExecutionClicked" prefHeight="34.0" prefWidth="34.0" visible="false">
+               <children>
+                  <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#896436" height="19.0" layoutX="8.0" layoutY="8.0" stroke="BLACK" strokeType="INSIDE" width="7.0" />
+                  <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#896436" height="19.0" layoutX="19.0" layoutY="8.0" stroke="BLACK" strokeType="INSIDE" width="7.0" />
+               </children>
+            </Pane>
+         </children>
+      </AnchorPane>
+   </children>
+</AnchorPane>

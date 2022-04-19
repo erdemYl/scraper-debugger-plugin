@@ -27,7 +27,7 @@ import scraper.utils.StringUtil;
         doc = "Port for debugging. Default is 8890",
         example = "scraper app.scrape debug debug-port:8890"
 )
-public final class DebuggerAddon implements Addon {
+public class DebuggerAddon implements Addon {
 
     private final System.Logger l = System.getLogger("Debugger");
     private final System.Logger.Level warn = System.Logger.Level.WARNING;
@@ -55,7 +55,7 @@ public final class DebuggerAddon implements Addon {
             dependencies.addComponent(FlowPermissions.class);
             dependencies.addComponent(FlowIdentifier.class);
             dependencies.addComponent(DebuggerActions.class);
-            dependencies.addComponent(DebuggerNodeHook.class);
+            dependencies.addComponent(FlowFilter.class);
 
             ACTIONS = dependencies.get(DebuggerActions.class);
         }
