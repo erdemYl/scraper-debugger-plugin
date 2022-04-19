@@ -50,10 +50,6 @@ public class DebuggerNodeHook implements NodeHook {
     }
 
     @Override
-    public void afterProcess(NodeContainer<? extends Node> n, FlowMap o) {
-    }
-
-    @Override
     public int order() {
         return Integer.MIN_VALUE;
     }

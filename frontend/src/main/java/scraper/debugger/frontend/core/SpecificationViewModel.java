@@ -63,7 +63,6 @@ public class SpecificationViewModel {
 
 
     Set<QuasiStaticNode> view(InstanceDTO jobIns, ControlFlowGraphDTO jobCFG) {
-
         Map<String, NodeDTO> nodeDTO = jobIns.getRoutes();
         Map<String, Set<String>> outgoingAddressMap = jobCFG.getOutgoingAddressMap();
         Set<String> endNodes = jobCFG.getEndNodes();
@@ -74,7 +73,7 @@ public class SpecificationViewModel {
                 nodeDTO.get(start),
                 endNodes.contains(start)
         );
-        TreeItem<QuasiStaticNode> root = new TreeItem<>(rootNode);
+        TreeItem<QuasiStaticNode> root = rootNode.treeItem;
 
         // all nodes
         Set<QuasiStaticNode> NODES = new HashSet<>();
@@ -83,22 +82,11 @@ public class SpecificationViewModel {
         recursiveViewer(root, NODES, nodeDTO, outgoingAddressMap, outgoingAddressMap.get(start), endNodes);
 
         Platform.runLater(() -> {
-            synchronized (this) {
-                QUASI_STATIC_TREE.setRoot(root);
-                QUASI_STATIC_TREE.setShowRoot(true);
-            }
+            QUASI_STATIC_TREE.setRoot(root);
+            QUASI_STATIC_TREE.setShowRoot(true);
         });
 
         return NODES;
-    }
-
-    Optional<QuasiStaticNode> parentOf(QuasiStaticNode node) {
-        synchronized (this) {
-            TreeCell<QuasiStaticNode> cell = CELLS.get(node);
-            if (cell == null) return Optional.empty();
-            TreeItem<QuasiStaticNode> parent = cell.getTreeItem().getParent();
-            return parent == null ? Optional.empty() : Optional.of(parent.getValue());
-        }
     }
 
     QuasiStaticNode getRoot() {
@@ -124,15 +112,14 @@ public class SpecificationViewModel {
     {
         parent.setExpanded(true);
         for (String out : outgoings) {
-            TreeItem<QuasiStaticNode> child = new TreeItem<>();
             QuasiStaticNode node = QuasiStaticNode.createFrom(
                     nodeDTO.get(out),
                     endNodes.contains(out)
             );
+            TreeItem<QuasiStaticNode> item = node.treeItem;
             NODES.add(node);
-            child.setValue(node);
-            parent.getChildren().add(child);
-            recursiveViewer(child, NODES, nodeDTO, outgoingAddressMap, outgoingAddressMap.get(out), endNodes);
+            parent.getChildren().add(item);
+            recursiveViewer(item, NODES, nodeDTO, outgoingAddressMap, outgoingAddressMap.get(out), endNodes);
         }
     }
 

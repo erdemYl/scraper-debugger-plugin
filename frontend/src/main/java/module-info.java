@@ -25,8 +25,6 @@ open module debugger.frontend {
     requires debugger.backend;
 
     exports scraper.debugger.frontend.api;
-    exports scraper.debugger.frontend.hook;
-    exports scraper.debugger.frontend.core;
 
     provides Hook with FrontendHook;
 }

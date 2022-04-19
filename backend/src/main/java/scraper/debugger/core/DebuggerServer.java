@@ -30,7 +30,6 @@ public final class DebuggerServer extends WebSocketServer {
     public final System.Logger l = System.getLogger("DebuggerServer");
     private final Logger l2 = LoggerFactory.getLogger("DebuggerServer");
     private final ReentrantLock lock = new ReentrantLock();
-    private final ReentrantLock sendMutex = new ReentrantLock(true);
     private final ObjectMapper m = new ObjectMapper();
     private WebSocket debugger = null;
 
@@ -39,7 +38,7 @@ public final class DebuggerServer extends WebSocketServer {
         setReuseAddr(true);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            Thread.currentThread().setName("Shutdown");
+            Thread.currentThread().setName("DebuggerShutdown");
             try {
                 l2.warn("Shutting down system");
                 STATE.setContinue();

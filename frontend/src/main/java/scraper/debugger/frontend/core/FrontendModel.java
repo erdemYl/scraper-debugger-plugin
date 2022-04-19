@@ -20,7 +20,7 @@ public class FrontendModel extends FrontendWebSocket {
     // Complete quasi-static flow tree of the program
     private final Trie<QuasiStaticNode> TREE = new Trie<>();
 
-    // How nodes are connected, n1 -> map(n2_address, n2)
+    // How nodes are connected, n1 -> map(n2.address, n2)
     private final Map<QuasiStaticNode, Map<String, QuasiStaticNode>> EDGES = new HashMap<>();
 
 
@@ -40,7 +40,6 @@ public class FrontendModel extends FrontendWebSocket {
 
     private Deque<QuasiStaticNode> CURRENT_SELECTED_NODES = null;
     private FlowDTO CURRENT_SELECTED_FLOW = null;
-    private boolean MAP_VISIBLE = true;
 
 
     public FrontendModel(FrontendController CONTROL, String bindingIp, int port) {
@@ -64,7 +63,7 @@ public class FrontendModel extends FrontendWebSocket {
 
         /* For each node capture the edges and create click actions */
         viewedNodes.forEach(node -> {
-            SPECIFICATION.parentOf(node).ifPresentOrElse(
+            node.getParent().ifPresentOrElse(
                     parent -> {
                         EDGES.compute(parent, (p, map) -> {
                             if (map == null) {
@@ -121,7 +120,6 @@ public class FrontendModel extends FrontendWebSocket {
             TREE.put(f.getIdent(), node);
             parentNode.addDeparture(parent);
         }
-
         node.addArrival(f);
     }
 

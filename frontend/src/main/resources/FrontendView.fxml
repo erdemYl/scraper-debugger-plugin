@@ -54,13 +54,13 @@
                     </content>
                   </ScrollPane>
                   <TableView fx:id="valueTable" layoutY="327.0" prefHeight="158.0" prefWidth="618.0" translateY="3.0" />
-                  <ListView fx:id="flowMapList" layoutY="353.0" prefHeight="134.0" prefWidth="309.0" />
-                  <Label fx:id="flowMapLabel" alignment="CENTER" layoutY="330.0" prefHeight="25.0" prefWidth="309.0" style="-fx-background-color: burlywood;" text="Flow Map">
+                  <ListView fx:id="flowMapList" layoutY="355.0" prefHeight="132.0" prefWidth="309.0" />
+                  <Region layoutX="309.0" layoutY="331.0" opacity="0.2" prefHeight="24.0" prefWidth="309.0" style="-fx-background-color: orange;" />
+                  <Label fx:id="flowMapLabel" alignment="CENTER" layoutY="330.0" prefHeight="25.0" prefWidth="309.0" style="-fx-background-color: burlywood; -fx-border-width: 2; -fx-border-color: #896436;" text="Flow Map">
                      <font>
                         <Font name="System Bold" size="14.0" />
                      </font>
                   </Label>
-                  <Region layoutX="308.0" layoutY="330.0" opacity="0.2" prefHeight="25.0" prefWidth="309.0" style="-fx-background-color: orange;" />
                </children>
             </AnchorPane>
           <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="618.0" />
@@ -86,7 +86,7 @@
       <AnchorPane fx:id="buttonLog" layoutX="246.0" layoutY="330.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" onMouseClicked="#buttonLogClicked" prefHeight="34.0" prefWidth="34.0">
          <children>
             <Circle fill="BURLYWOOD" layoutX="17.0" layoutY="17.0" radius="17.0" stroke="#896436" strokeType="INSIDE" strokeWidth="2.0" />
-            <Label fx:id="logLabel" alignment="CENTER" prefHeight="34.0" prefWidth="34.0" text="Log">
+            <Label alignment="CENTER" prefHeight="34.0" prefWidth="34.0" text="Log">
                <font>
                   <Font name="System Bold" size="12.0" />
                </font>
@@ -103,7 +103,7 @@
       <AnchorPane fx:id="buttonStepAllContinueExecution" layoutX="246.0" layoutY="240.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" onMouseClicked="#buttonStepAllContinueExecutionClicked" prefHeight="34.0" prefWidth="34.0">
          <children>
             <Circle fill="BURLYWOOD" layoutX="17.0" layoutY="17.0" radius="17.0" stroke="#896436" strokeType="INSIDE" strokeWidth="2.0" />
-            <Label fx:id="stepButton" alignment="CENTER" layoutX="4.0" layoutY="5.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="22.0" prefWidth="28.0" text="Step">
+            <Label alignment="CENTER" layoutX="4.0" layoutY="5.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="22.0" prefWidth="28.0" text="Step">
                <font>
                   <Font name="System Bold" size="12.0" />
                </font>

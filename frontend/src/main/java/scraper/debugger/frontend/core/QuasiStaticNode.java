@@ -1,5 +1,6 @@
 package scraper.debugger.frontend.core;
 
+import javafx.scene.control.TreeItem;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
@@ -23,8 +24,12 @@ public final class QuasiStaticNode {
     private final Map<String, FlowDTO> departures = new HashMap<>();
 
 
-    // Tree pane circle
+    // Circle for tree pane
     final Circle circle;
+
+
+    // Tree item for specification view-model
+    final TreeItem<QuasiStaticNode> treeItem;
 
 
     // Whether this node now on screen is
@@ -41,16 +46,20 @@ public final class QuasiStaticNode {
 
     private final String nodeAddress;
     private final String nodeType;
-    private final boolean isEndNode;
 
 
-    private QuasiStaticNode(NodeDTO n, boolean isEndNode) {
+    private QuasiStaticNode(NodeDTO n, boolean endNode) {
         circle = new Circle(9);
         circle.setFill(Paint.valueOf("burlywood"));
+        if (endNode) {
+            circle.setStrokeWidth(2);
+            circle.setStroke(Paint.valueOf("#896436"));
+        }
+        treeItem = new TreeItem<>(this);
+
         nodeAddress = n.getAddress();
         circle.setAccessibleText(nodeAddress);
         this.nodeType = n.getType();
-        this.isEndNode = isEndNode;
         switch (nodeType) {
             case "IntRange" -> dataStreamKey = (String) n.getNodeConfiguration().get("output");
             case "Map" -> dataStreamKey = (String) n.getNodeConfiguration().get("putElement");
@@ -62,11 +71,11 @@ public final class QuasiStaticNode {
         return new QuasiStaticNode(n, isEndNode);
     }
 
-    void addArrival(FlowDTO f) {
+    synchronized void addArrival(FlowDTO f) {
         arrivals.put(f.getIdent(), f);
     }
 
-    void addDeparture(String ident) {
+    synchronized void addDeparture(String ident) {
         arrivals.computeIfPresent(ident, (i, f) -> {
             departures.put(i, f);
             return null;
@@ -85,11 +94,11 @@ public final class QuasiStaticNode {
         }
     }
 
-    Set<FlowDTO> arrivals() {
+    synchronized Set<FlowDTO> arrivals() {
         return Set.copyOf(arrivals.values());
     }
 
-    Set<FlowDTO> departures() {
+    synchronized Set<FlowDTO> departures() {
         return Set.copyOf(departures.values());
     }
 
@@ -105,6 +114,11 @@ public final class QuasiStaticNode {
 
     String getType() {
         return nodeType;
+    }
+
+    Optional<QuasiStaticNode> getParent() {
+        TreeItem<QuasiStaticNode> parentItem = treeItem.getParent();
+        return parentItem == null ? Optional.empty() : Optional.of(parentItem.getValue());
     }
 
     Optional<Line> lineTo(QuasiStaticNode other) {
