@@ -2,7 +2,6 @@ package scraper.debugger.frontend.core;
 
 import javafx.application.Platform;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
@@ -106,12 +105,12 @@ public class TreePane {
 
         // draw line between
         Line line = new Line();
-        lines.put(line, Map.entry(parent, childToPut));
-        lines2.put(line, Map.entry(pLevel, level));
         double startY = getNodeCenter(pLevel, parent) + 9;
         double endY = getNodeCenter(level, childToPut) + 9;
 
         Platform.runLater(() -> {
+            lines.put(line, Map.entry(parent, childToPut));
+            lines2.put(line, Map.entry(pLevel, level));
             line.setLayoutX(0);
             line.setLayoutY(0);
             line.setStartX(pLevel.getLayoutX() + 9);

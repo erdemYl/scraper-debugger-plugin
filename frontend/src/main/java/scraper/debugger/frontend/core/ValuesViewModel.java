@@ -1,7 +1,6 @@
 package scraper.debugger.frontend.core;
 
 import javafx.application.Platform;
-import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -19,8 +18,6 @@ import java.util.*;
 import java.util.concurrent.Executors;
 
 public class ValuesViewModel {
-
-    private final FrontendModel MODEL;
 
     // Flow value table
     private final TableView<FlowDTO> VALUES;
@@ -47,7 +44,6 @@ public class ValuesViewModel {
 
 
     ValuesViewModel(FrontendModel MODEL, TableView<FlowDTO> valueTable, ListView<String> flowMap, Label mapLabel) {
-        this.MODEL = MODEL;
         VALUES = valueTable;
         MAP = flowMap;
         MAP_LABEL = mapLabel;
@@ -55,6 +51,25 @@ public class ValuesViewModel {
         MAP.setItems(currentViewedMap);
 
         String style = "-fx-background-color: burlywood; -fx-border-color:  #896436; -fx-border-width: 2";
+
+        // cell factory for static columns
+        Callback<TableColumn<FlowDTO, String>, TableCell<FlowDTO, String>> cells = column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String content, boolean empty) {
+                super.updateItem(content, empty);
+                if (empty) {
+                    setStyle(null);
+                    setText(null);
+                } else {
+                    setStyle(style);
+                    setText(content);
+                }
+            }
+        };
+        waitingColumn.setCellFactory(cells);
+        processedColumn.setCellFactory(cells);
+
+        // styling static columns
         waitingColumn.setStyle(style);
         waitingColumn.setPrefWidth(154);
         waitingColumn.textProperty().bind(waitingFlowNumber);
@@ -64,6 +79,26 @@ public class ValuesViewModel {
 
         VALUE_VIEW = createViewService();
         VALUE_VIEW.setExecutor(Executors.newSingleThreadExecutor());
+
+        // flow map elements
+        MAP.setCellFactory(new Callback<>() {
+            @Override
+            public ListCell<String> call(ListView<String> view) {
+                return new ListCell<>() {
+                    @Override
+                    protected void updateItem(String content, boolean empty) {
+                        super.updateItem(content, empty);
+                        if (empty) {
+                            setStyle(null);
+                            setText(null);
+                        } else {
+                            setStyle(style);
+                            setText(content);
+                        }
+                    }
+                };
+            }
+        });
 
         // rows
         VALUES.setRowFactory(new Callback<>() {
@@ -75,11 +110,9 @@ public class ValuesViewModel {
                         super.updateItem(f, empty);
                         if (empty) {
                             setStyle(null);
-                            setPrefWidth(0);
                             setOnMouseClicked(null);
                         } else {
                             setStyle("-fx-background-color: darksalmon");
-                            setPrefWidth(103);
                             setOnMouseClicked(e -> {
                                 setTextFill(Paint.valueOf("darksalmon"));
                                 currentViewedMap.clear();
@@ -149,8 +182,8 @@ public class ValuesViewModel {
                                 });
 
                                 // find usable columns for this marking
-                                currentSelectedNodes.pollLast();
-                                List<TableColumn<FlowDTO, String>> usableColumns = currentSelectedNodes.stream()
+                                List<TableColumn<FlowDTO, String>> usableColumns = new LinkedList<>(currentSelectedNodes){{pollLast();}}
+                                        .stream()
                                         .map(valueColumns::get)
                                         .filter(Objects::nonNull)
                                         .toList();
