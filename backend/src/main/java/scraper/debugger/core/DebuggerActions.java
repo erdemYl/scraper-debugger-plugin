@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import scraper.debugger.core.FlowIdentifier.LifecycleFilter;
 
 
+@SuppressWarnings("unused") // API convention
 public final class DebuggerActions {
 
     // Logger with actually intended name
@@ -187,7 +188,6 @@ public final class DebuggerActions {
 
     void queryNotToEmitterNodes(String ident) {
         SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.NOT_TO_FLOW_EMITTER, ident));
-
     }
 
 

@@ -30,7 +30,7 @@ public class ValuesViewModel {
 
     // Flow map
     private final ListView<String> MAP;
-    private final Label MAP_LABEL = new Label();
+    private final Label MAP_LABEL;
 
     // Registered columns, not modified once columns registered
     private final Map<QuasiStaticNode, TableColumn<FlowDTO, String>> valueColumns = new HashMap<>();
@@ -46,10 +46,11 @@ public class ValuesViewModel {
     private final ObservableList<String> currentViewedMap = FXCollections.observableArrayList();
 
 
-    ValuesViewModel(FrontendModel MODEL, TableView<FlowDTO> valueTable, ListView<String> flowMap) {
+    ValuesViewModel(FrontendModel MODEL, TableView<FlowDTO> valueTable, ListView<String> flowMap, Label mapLabel) {
         this.MODEL = MODEL;
         VALUES = valueTable;
         MAP = flowMap;
+        MAP_LABEL = mapLabel;
         VALUES.setItems(currentViewedFlows);
         MAP.setItems(currentViewedMap);
 
@@ -111,6 +112,11 @@ public class ValuesViewModel {
     void viewValues(Deque<QuasiStaticNode> selectedNodes) {
         currentSelectedNodes = Objects.requireNonNull(selectedNodes);
         VALUE_VIEW.start();
+    }
+
+    void visibleMap(boolean v) {
+        MAP.setVisible(v);
+        MAP_LABEL.setVisible(v);
     }
 
     private Service<Deque<QuasiStaticNode>> createViewService() {

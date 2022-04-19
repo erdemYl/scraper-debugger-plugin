@@ -1,5 +1,6 @@
 package scraper.debugger.frontend.core;
 
+import javafx.application.Platform;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
@@ -17,30 +18,36 @@ import java.util.*;
 public class FrontendModel extends FrontendWebSocket {
 
     // Complete quasi-static flow tree of the program
-    private final Trie<QuasiStaticNode> QUASI_STATIC_TREE = new Trie<>();
+    private final Trie<QuasiStaticNode> TREE = new Trie<>();
 
-    private final Map<QuasiStaticNode, Map<String, QuasiStaticNode>> fromToNode = new HashMap<>();
+    // How nodes are connected, n1 -> map(n2_address, n2)
+    private final Map<QuasiStaticNode, Map<String, QuasiStaticNode>> EDGES = new HashMap<>();
+
 
     // Displayed quasi-static flow tree, modified dynamically
-    private final TreePane QUASI_STATIC_TREE_PANE;
+    private final TreePane TREE_PANE;
+
 
     // Frontend components
     private final FrontendController CONTROL;
     private final SpecificationViewModel SPECIFICATION;
     private final ValuesViewModel VALUES;
 
+
     // Actions dependency
     final FrontendActions ACTIONS;
 
+
     private Deque<QuasiStaticNode> CURRENT_SELECTED_NODES = null;
     private FlowDTO CURRENT_SELECTED_FLOW = null;
+    private boolean MAP_VISIBLE = true;
 
 
     public FrontendModel(FrontendController CONTROL, String bindingIp, int port) {
         super(bindingIp, port);
         this.CONTROL = CONTROL;
-        QUASI_STATIC_TREE_PANE = new TreePane(CONTROL.dynamicFlowTree);
-        VALUES = new ValuesViewModel(this, CONTROL.valueTable, CONTROL.flowMapList);
+        TREE_PANE = new TreePane(CONTROL.dynamicFlowTree);
+        VALUES = new ValuesViewModel(this, CONTROL.valueTable, CONTROL.flowMapList, CONTROL.flowMapLabel);
         ACTIONS = new FrontendActions(this);
         SPECIFICATION = new SpecificationViewModel(ACTIONS, this, CONTROL.specificationTreeView);
     }
@@ -55,11 +62,11 @@ public class FrontendModel extends FrontendWebSocket {
         /* Create for each data stream key a value column */
         VALUES.createValueColumns(viewedNodes);
 
-        /* Define for each node's circle its click action */
+        /* For each node capture the edges and create click actions */
         viewedNodes.forEach(node -> {
             SPECIFICATION.parentOf(node).ifPresentOrElse(
                     parent -> {
-                        fromToNode.compute(parent, (p, map) -> {
+                        EDGES.compute(parent, (p, map) -> {
                             if (map == null) {
                                 return new HashMap<>(Map.of(node.toString(), node));
                             }
@@ -69,7 +76,7 @@ public class FrontendModel extends FrontendWebSocket {
                     },
                     () -> {
                         // root node
-                        fromToNode.putIfAbsent(node, new HashMap<>(4));
+                        EDGES.putIfAbsent(node, new HashMap<>(4));
                     }
             );
 
@@ -78,6 +85,7 @@ public class FrontendModel extends FrontendWebSocket {
             /* Handler for control down clicks */
             circle.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
                 if (event.isControlDown() && node.isOnScreen()) {
+                    VALUES.visibleMap(false);
                     SPECIFICATION.selectNodesUntil(node);
                 }
             });
@@ -85,7 +93,8 @@ public class FrontendModel extends FrontendWebSocket {
             /* Handler for control up clicks */
             circle.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
                 if (!event.isControlDown() && node.isOnScreen()) {
-
+                    VALUES.visibleMap(true);
+                    SPECIFICATION.selectNodesUntil(node);
                 }
             });
         });
@@ -94,22 +103,22 @@ public class FrontendModel extends FrontendWebSocket {
     @Override
     protected void takeIdentifiedFlow(FlowDTO f) {
         QuasiStaticNode node;
-        if (QUASI_STATIC_TREE.isEmpty()) {
+        if (TREE.isEmpty()) {
             node = SPECIFICATION.getRoot();
-            QUASI_STATIC_TREE.put("i", node);
-            QUASI_STATIC_TREE_PANE.putInitial(node.circle);
+            TREE.put("i", node);
+            TREE_PANE.putInitial(node.circle);
             node.setOnScreen();
 
         } else {
             String parent = f.getParentIdent();
-            QuasiStaticNode parentNode = QUASI_STATIC_TREE.get(parent);
-            node = fromToNode.get(parentNode).get(f.getIntoAddress());
+            QuasiStaticNode parentNode = TREE.get(parent);
+            node = EDGES.get(parentNode).get(f.getIntoAddress());
             if (!node.isOnScreen()) {
-                Line line = QUASI_STATIC_TREE_PANE.put(parentNode.circle, node.circle);
+                Line line = TREE_PANE.put(parentNode.circle, node.circle);
                 parentNode.addOutgoingLine(node, line);
                 node.setOnScreen();
             }
-            QUASI_STATIC_TREE.put(f.getIdent(), node);
+            TREE.put(f.getIdent(), node);
             parentNode.addDeparture(parent);
         }
 
@@ -118,7 +127,7 @@ public class FrontendModel extends FrontendWebSocket {
 
     @Override
     protected void takeBreakpointHit(FlowDTO f) {
-        QuasiStaticNode node = QUASI_STATIC_TREE.get(f.getIdent());
+        QuasiStaticNode node = TREE.get(f.getIdent());
         node.circle.setFill(Paint.valueOf("darksalmon"));
     }
 
@@ -128,7 +137,9 @@ public class FrontendModel extends FrontendWebSocket {
 
     @Override
     protected void takeLogMessage(String log) {
-        //CONTROL.logTextArea.appendText(log.substring(13));
+        Platform.runLater(() -> {
+            CONTROL.logTextArea.appendText(log.substring(13));
+        });
     }
 
 
@@ -148,5 +159,4 @@ public class FrontendModel extends FrontendWebSocket {
     Optional<FlowDTO> currentSelectedFlow() {
         return Optional.ofNullable(CURRENT_SELECTED_FLOW);
     }
-
 }

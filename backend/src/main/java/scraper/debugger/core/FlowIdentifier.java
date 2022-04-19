@@ -1,8 +1,6 @@
 package scraper.debugger.core;
 
 import scraper.api.*;
-import scraper.debugger.addon.DebuggerHook;
-import scraper.debugger.addon.DebuggerHook.NodeType;
 import scraper.debugger.dto.FlowDTO;
 import scraper.debugger.tree.Trie;
 
@@ -28,7 +26,7 @@ public class FlowIdentifier {
     private final Trie<IdentifiedFlow> quasiStaticTree = new Trie<>();
 
 
-    // Default lock provider
+    // Branch lock provider
     private final LockProvider lockProvider = new LockProvider();
 
 
@@ -81,43 +79,8 @@ public class FlowIdentifier {
         }
     }
 
-    public static class IdentificationScheduler {
-        private final Queue<Entry<UUID, Object>> mutexes = new ConcurrentLinkedQueue<>();
-        private final ReentrantLock sequenceMutex;
 
-        private IdentificationScheduler(ReentrantLock sequenceMutex) {
-            this.sequenceMutex = sequenceMutex;
-        }
-
-        public void enqueue(UUID id, Runnable with, boolean wait) {
-            try {
-                sequenceMutex.lock();
-                Object mutex = new Object();
-                mutexes.add(new AbstractMap.SimpleImmutableEntry<>(id, mutex));
-                synchronized (mutex) {
-                    with.run();
-                    sequenceMutex.unlock();
-                    if (wait) {
-                        try {mutex.wait();} catch (InterruptedException e) {e.printStackTrace();}
-                    }
-                }
-            } finally {
-                if (sequenceMutex.isHeldByCurrentThread()) sequenceMutex.unlock();
-            }
-        }
-
-        public void dequeue() {
-            if (!mutexes.isEmpty()) {
-                Object mutex = mutexes.poll();
-                synchronized (mutex) {
-                    mutex.notify();
-                }
-            }
-        }
-    }
-
-
-    public static class LockProvider {
+    private static class LockProvider {
         private final Trie<Lock> locks;
         private final Lock defaultLock;
 
@@ -154,24 +117,11 @@ public class FlowIdentifier {
     }
 
 
-    public IdentificationScheduler newScheduler(ReentrantLock sequenceMutex) {
-        return new IdentificationScheduler(sequenceMutex);
-    }
-
-
-    public LockProvider newLockProvider() {
-        return new LockProvider();
-    }
-
-
 
     //=============
     // Identify
     //=============
 
-    /**
-     * Acquires inherently the branch lock object of this flow.
-     */
     public void identify(NodeContainer<? extends Node> n, FlowMap o) {
 
         // each flow initially has permission
@@ -268,7 +218,7 @@ public class FlowIdentifier {
         TO_FLOW_EMITTER,           // flow to nodes that introduce new flows
         TO_FLOW_EMITTER_NOT_FORK,  // flow to nodes that introduce new flows except fork nodes
         TO_FORK,                   // flow to fork node
-        NOT_TO_FLOW_EMITTER;       // flow to nodes that do not introduce new flows
+        NOT_TO_FLOW_EMITTER        // flow to nodes that do not introduce new flows
     }
 
     Deque<FlowDTO> getLifecycle(LifecycleFilter filter, String ident) {

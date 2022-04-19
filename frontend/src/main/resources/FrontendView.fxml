@@ -54,8 +54,8 @@
                     </content>
                   </ScrollPane>
                   <TableView fx:id="valueTable" layoutY="327.0" prefHeight="158.0" prefWidth="618.0" translateY="3.0" />
-                  <ListView fx:id="flowMapList" layoutY="353.0" prefHeight="134.0" prefWidth="309.0" visible="false" />
-                  <Label fx:id="flowMapLabel" alignment="CENTER" layoutY="330.0" prefHeight="25.0" prefWidth="309.0" style="-fx-background-color: burlywood;" text="Flow Map" visible="false">
+                  <ListView fx:id="flowMapList" layoutY="353.0" prefHeight="134.0" prefWidth="309.0" />
+                  <Label fx:id="flowMapLabel" alignment="CENTER" layoutY="330.0" prefHeight="25.0" prefWidth="309.0" style="-fx-background-color: burlywood;" text="Flow Map">
                      <font>
                         <Font name="System Bold" size="14.0" />
                      </font>
@@ -71,13 +71,13 @@
             <Font name="System Bold" size="14.0" />
          </font>
       </Label>
-      <Pane fx:id="buttonStepSelected" layoutX="251.0" layoutY="435.0" maxHeight="-Infinity" maxWidth="-Infinity" onMouseClicked="#buttonStepSelectedClicked" prefHeight="24.0" prefWidth="24.0" rotate="-90.0" style="-fx-background-color: burlywood; -fx-border-color: #896436; -fx-border-width: 2;">
+      <Pane fx:id="buttonStepSelected" layoutX="251.0" layoutY="435.0" maxHeight="-Infinity" maxWidth="-Infinity" onMouseClicked="#buttonStepSelectedClicked" opacity="0.3" prefHeight="24.0" prefWidth="24.0" rotate="-90.0" style="-fx-background-color: burlywood; -fx-border-color: #896436; -fx-border-width: 2;">
          <children>
             <Polygon fill="#896436" layoutX="-46.0" layoutY="-42.0" points="65.33331298828125, 65.00009155273438, 53.666717529296875, 65.00009155273438, 65.33334350585938, 53.00006103515625" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" translateY="-4.0" />
             <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#896436" height="5.0" layoutX="4.0" layoutY="8.0" rotate="45.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" translateY="1.0" width="15.0" />
          </children>
       </Pane>
-      <Pane fx:id="buttonContinueSelected" layoutX="251.0" layoutY="471.0" maxHeight="-Infinity" maxWidth="-Infinity" onMouseClicked="#buttonContinueSelectedClicked" prefHeight="24.0" prefWidth="24.0" rotate="-45.0" style="-fx-background-color: burlywood; -fx-border-color: #896436; -fx-border-width: 2;">
+      <Pane fx:id="buttonContinueSelected" layoutX="251.0" layoutY="471.0" maxHeight="-Infinity" maxWidth="-Infinity" onMouseClicked="#buttonContinueSelectedClicked" opacity="0.3" prefHeight="24.0" prefWidth="24.0" rotate="-45.0" style="-fx-background-color: burlywood; -fx-border-color: #896436; -fx-border-width: 2;">
          <children>
             <Polygon fill="#896436" layoutX="-47.0" layoutY="-42.0" points="65.33331298828125, 65.00009155273438, 53.666717529296875, 65.00009155273438, 65.33334350585938, 53.00006103515625" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" translateY="-4.0" />
             <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#896436" height="5.0" layoutX="4.0" layoutY="9.0" rotate="45.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" translateY="1.0" width="15.0" />

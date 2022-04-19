@@ -30,7 +30,7 @@ public class FrontendApp extends Application {
             FrontendController CONTROL = loader.getController();
             MODEL = new FrontendModel(CONTROL, bindingIp, port);
             CONTROL.setModel(MODEL);
-            CONTROL.initializeLogTextArea();
+            CONTROL.initialize();
 
             stage.setScene(new Scene(loaded));
             stage.initStyle(StageStyle.UNDECORATED);

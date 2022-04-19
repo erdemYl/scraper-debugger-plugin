@@ -1,6 +1,8 @@
 package scraper.debugger.frontend.core;
 
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.AnchorPane;
@@ -18,8 +20,17 @@ public class FrontendController {
 
     public void setModel(FrontendModel MODEL) { this.MODEL = MODEL; }
 
-    public void initializeLogTextArea() {
-        //logTextArea.textProperty().addListener((value, oldVal, newVal) -> logTextArea.setScrollTop(Double.MIN_VALUE));
+    public void initialize() {
+        flowMapList.visibleProperty().addListener((changed, oldVal, newVal) -> {
+            if (newVal) {
+                buttonStepSelected.setOpacity(0.3);
+                buttonContinueSelected.setOpacity(0.3);
+            } else {
+                buttonStepSelected.setOpacity(1);
+                buttonContinueSelected.setOpacity(1);
+            }
+        });
+        logTextArea.textProperty().addListener((value, oldVal, newVal) -> logTextArea.setScrollTop(Double.MAX_VALUE));
     }
 
 
@@ -106,19 +117,23 @@ public class FrontendController {
 
     @FXML Pane buttonStepSelected;
     @FXML void buttonStepSelectedClicked() {
-        MODEL.currentSelectedFlow().ifPresent(f -> {
-            MODEL.ACTIONS.requestStepSelected(f.getIdent());
-            MODEL.ACTIONS.requestContinueExecution();
-        });
+        if (buttonStepSelected.getOpacity() == 1) {
+            MODEL.currentSelectedFlow().ifPresent(f -> {
+                MODEL.ACTIONS.requestStepSelected(f.getIdent());
+                MODEL.ACTIONS.requestContinueExecution();
+            });
+        }
     }
 
 
     @FXML Pane buttonContinueSelected;
     @FXML void buttonContinueSelectedClicked() {
-        MODEL.currentSelectedFlow().ifPresent(f -> {
-            MODEL.ACTIONS.requestResumeSelected(f.getIdent());
-            MODEL.ACTIONS.requestContinueExecution();
-        });
+        if (buttonContinueSelected.getOpacity() == 1) {
+            MODEL.currentSelectedFlow().ifPresent(f -> {
+                MODEL.ACTIONS.requestResumeSelected(f.getIdent());
+                MODEL.ACTIONS.requestContinueExecution();
+            });
+        }
     }
 
 

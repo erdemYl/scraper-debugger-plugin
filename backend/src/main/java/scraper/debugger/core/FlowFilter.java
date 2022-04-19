@@ -45,7 +45,6 @@ public class FlowFilter {
                 STATE.waitOnBreakpoint(() -> {
                     STATE.l.log(Level.INFO, format, n.getAddress().getRepresentation());
                     SERVER.sendBreakpointHit(FI.getDTO(id));
-                    FI.releaseBranchLock(id);
                 });
 
                 while(!FP.exists(id)) {
@@ -54,9 +53,6 @@ public class FlowFilter {
 
                 // message box
                 ACTIONS.checkLeftMessages(id);
-
-                // processing continues
-                FI.acquireBranchLock(id);
 
                 checkException(n, o, false);
                 return;
@@ -83,15 +79,12 @@ public class FlowFilter {
                 STATE.waitOnBreakpoint(() -> {
                     ACTIONS.l.log(Level.INFO, "{0} in {1}", any.getMessage(), adr);
                     if (sendBreak) SERVER.sendBreakpointHit(FI.getDTO(id));
-                    FI.releaseBranchLock(id);
                 });
 
                 while (!FP.exists(id) && !ACTIONS.checkChangeOrAbortMsg(id)) {
                     // waits until node change or abort
                     STATE.waitOnBreakpoint();
                 }
-
-                FI.acquireBranchLock(id);
 
                 // checks until no exception
                 checkException(n, o, false);

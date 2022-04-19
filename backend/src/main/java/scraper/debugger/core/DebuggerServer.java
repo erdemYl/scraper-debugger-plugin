@@ -39,7 +39,7 @@ public final class DebuggerServer extends WebSocketServer {
         setReuseAddr(true);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            Thread.currentThread().setName("DebuggerShutDown");
+            Thread.currentThread().setName("Shutdown");
             try {
                 l2.warn("Shutting down system");
                 STATE.setContinue();
