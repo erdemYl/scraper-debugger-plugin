@@ -7,7 +7,6 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Pane;
 
 import scraper.debugger.dto.FlowDTO;
-import scraper.debugger.frontend.core.FrontendModel.QuasiStaticNode;
 
 
 public class FrontendController {
@@ -20,7 +19,7 @@ public class FrontendController {
     public void setModel(FrontendModel MODEL) { this.MODEL = MODEL; }
 
     public void initializeLogTextArea() {
-        logTextArea.textProperty().addListener((value, oldVal, newVal) -> logTextArea.setScrollTop(Double.MAX_VALUE));
+        //logTextArea.textProperty().addListener((value, oldVal, newVal) -> logTextArea.setScrollTop(Double.MIN_VALUE));
     }
 
 

@@ -16,7 +16,7 @@ import java.util.Map;
 
 @ArgsCommand(
         value = "debug",
-        doc = "Starts debugger frontend application if debug flag given.",
+        doc = "Starts debugger frontend desktop application.",
         example = "scraper app.scrape debug"
 )
 public final class FrontendHook implements Hook {

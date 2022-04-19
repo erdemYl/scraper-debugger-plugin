@@ -51,7 +51,6 @@ public class DebuggerNodeHook implements NodeHook {
 
     @Override
     public void afterProcess(NodeContainer<? extends Node> n, FlowMap o) {
-        FI.releaseBranchLock(o.getId());
     }
 
     @Override

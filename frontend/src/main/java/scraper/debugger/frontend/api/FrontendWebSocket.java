@@ -98,15 +98,15 @@ public abstract class FrontendWebSocket extends WebSocketClient {
     // Update Taking
     //=================
 
-    public abstract void takeSpecification(InstanceDTO jobIns, ControlFlowGraphDTO jobCFG);
+    protected abstract void takeSpecification(InstanceDTO jobIns, ControlFlowGraphDTO jobCFG);
 
-    public abstract void takeIdentifiedFlow(FlowDTO f);
+    protected abstract void takeIdentifiedFlow(FlowDTO f);
 
-    public abstract void takeBreakpointHit(FlowDTO f);
+    protected abstract void takeBreakpointHit(FlowDTO f);
 
-    public abstract void takeFinishedFlow(FlowDTO f);
+    protected abstract void takeFinishedFlow(FlowDTO f);
 
-    public abstract void takeLogMessage(String log);
+    protected abstract void takeLogMessage(String log);
 
     BlockingQueue<Deque<FlowDTO>> getQueryQueue() {
         return queryQueue;

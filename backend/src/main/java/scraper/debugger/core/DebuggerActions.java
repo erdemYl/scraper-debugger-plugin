@@ -125,13 +125,8 @@ public final class DebuggerActions {
     }
 
     void stopExecution() {
-        try {
-            STATE.BARGE_IN.lock();
-            FP.removeAll();
-            STATE.l.log(info, "ALL FLOWS STOPPED");
-        } finally {
-            STATE.BARGE_IN.unlock();
-        }
+        FP.removeAll();
+        STATE.l.log(info, "ALL FLOWS STOPPED");
     }
 
     void stepAll() {

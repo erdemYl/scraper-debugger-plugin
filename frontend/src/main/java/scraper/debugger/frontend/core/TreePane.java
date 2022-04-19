@@ -1,8 +1,8 @@
 package scraper.debugger.frontend.core;
 
 import javafx.application.Platform;
-import javafx.concurrent.Task;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
@@ -10,10 +10,8 @@ import javafx.scene.shape.Line;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-@SuppressWarnings("Duplicates")
+
 public class TreePane {
 
     // Pane, upon which our tree will build itself
@@ -33,10 +31,8 @@ public class TreePane {
 
     public TreePane(AnchorPane pane) {
         TREE_PANE = pane;
-        Platform.runLater(() -> {
-            TREE_PANE.setPrefWidth(2000);
-            TREE_PANE.setPrefHeight(1000);
-        });
+        TREE_PANE.setPrefWidth(2000);
+        TREE_PANE.setPrefHeight(1000);
     }
 
     public void putInitial(Circle circle) {
@@ -56,7 +52,7 @@ public class TreePane {
 
     public Line put(Circle parent, Circle childToPut) {
         VBox pLevel = circleToLevel.get(parent);
-        assert pLevel != null;
+        Objects.requireNonNull(pLevel);
         assert !exists(childToPut);
 
         // create or find level
@@ -65,9 +61,15 @@ public class TreePane {
         if (pLevelNumber == nodeBoxes.size() - 1) {
             // child introduces new level
             level = createLevel(pLevel.getLayoutX() + 100);
-            nodeBoxSeparation.put(level, new HashMap<>(4));
+
+            Map<Integer, List<Circle>> separation = new HashMap<>();
+            separation.put(
+                    pLevel.getChildren().indexOf(parent),
+                    new LinkedList<>(List.of(childToPut))
+            );
+
+            nodeBoxSeparation.put(level, separation);
             nodeBoxes.add(level);
-            circleToLevel.put(childToPut, level);
 
             Platform.runLater(() -> {
                 level.getChildren().add(childToPut);
@@ -85,26 +87,27 @@ public class TreePane {
                 level.getChildren().add(addingIndex, childToPut);
             });
 
+            // update partition
+            int parentIndex = pLevel.getChildren().indexOf(parent);
+            Map<Integer, List<Circle>> partition = nodeBoxSeparation.get(level);
+            List<Circle> goes = partition.get(parentIndex);
+            if (goes == null) {
+                goes = new LinkedList<>(List.of(childToPut));
+                partition.put(parentIndex, goes);
+            }
+            else goes.add(childToPut);
+
             updateNodeBoxSeparation(addingIndex, level);
         }
 
-
-        // update partition
-        int parentIndex = pLevel.getChildren().indexOf(parent);
-        Map<Integer, List<Circle>> partition = nodeBoxSeparation.get(level);
-        List<Circle> goes = partition.get(parentIndex);
-        if (goes == null) {
-            goes = new LinkedList<>();
-            goes.add(parent);
-            partition.put(parentIndex, goes);
-        }
-        else goes.add(parent);
+        // put circle
+        circleToLevel.put(childToPut, level);
 
 
-        // drawl line between
+        // draw line between
         Line line = new Line();
-        lines.put(line, new AbstractMap.SimpleEntry<>(parent, childToPut));
-        lines2.put(line, new AbstractMap.SimpleEntry<>(pLevel, level));
+        lines.put(line, Map.entry(parent, childToPut));
+        lines2.put(line, Map.entry(pLevel, level));
         double startY = getNodeCenter(pLevel, parent) + 9;
         double endY = getNodeCenter(level, childToPut) + 9;
 
@@ -116,10 +119,9 @@ public class TreePane {
             line.setEndX(level.getLayoutX() + 9);
             line.setEndY(endY);
             TREE_PANE.getChildren().add(line);
+            updateLines(pLevel, level);
+            updateLines(level);
         });
-
-        updateLines(pLevel, level);
-        updateLines(level);
 
         return line;
     }
@@ -238,14 +240,12 @@ public class TreePane {
 
     private VBox createLevel(double xGap) {
         VBox level = new VBox();
-        Platform.runLater(() -> {
-            level.setAlignment(Pos.CENTER);
-            level.setPrefWidth(20);
-            level.setPrefHeight(330);
-            level.setSpacing(60);
-            level.setLayoutY(9);
-            level.setLayoutX(xGap);
-        });
+        level.setAlignment(Pos.CENTER);
+        level.setPrefWidth(20);
+        level.setPrefHeight(330);
+        level.setSpacing(60);
+        level.setLayoutY(9);
+        level.setLayoutX(xGap);
         return level;
     }
 

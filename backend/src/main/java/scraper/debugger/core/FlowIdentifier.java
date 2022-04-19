@@ -22,7 +22,6 @@ public class FlowIdentifier {
 
     // Every identified flow
     private final Map<UUID, IdentifiedFlow> identifiedFlows = new ConcurrentHashMap<>();
-    private final Set<UUID> identifiedUUIDs = identifiedFlows.keySet();
 
 
     // Quasi-static flow tree
@@ -73,7 +72,7 @@ public class FlowIdentifier {
             toForkNode = getNodeType(address).isFork();
         }
 
-        String next() {
+        synchronized String next() {
             String post = toFlowEmitterNode
                     ? ident + postfix + "."
                     : ident + postfix;
@@ -174,22 +173,12 @@ public class FlowIdentifier {
      * Acquires inherently the branch lock object of this flow.
      */
     public void identify(NodeContainer<? extends Node> n, FlowMap o) {
-        try {
-            STATE.BARGE_IN.lock();
-            UUID id = o.getId();
 
-            // each flow initially has permission
-            FP.create(id);
+        // each flow initially has permission
+        FP.create(o.getId());
 
-            IdentifiedFlow f = identifyNew(n, o);
-            acquireBranchLock(id);
-            SERVER.sendIdentifiedFlow(f.toSent);
-
-        } catch (Exception e) {
-            STATE.l.log(System.Logger.Level.WARNING, "A flow in node {0} cannot be identified.", n.getAddress().toString());
-        } finally {
-            STATE.BARGE_IN.unlock();
-        }
+        IdentifiedFlow f = identifyNew(n, o);
+        SERVER.sendIdentifiedFlow(f.toSent);
     }
 
     private IdentifiedFlow identifyNew(NodeContainer<? extends Node> n, FlowMap o) {
@@ -229,7 +218,7 @@ public class FlowIdentifier {
 
 
     public void forEachIdentified(Consumer<UUID> consumer) {
-        identifiedUUIDs.forEach(consumer);
+        identifiedFlows.keySet().forEach(consumer);
     }
 
     /**
@@ -251,7 +240,7 @@ public class FlowIdentifier {
     }
 
     public boolean exists(UUID id) {
-        return identifiedUUIDs.contains(id);
+        return identifiedFlows.containsKey(id);
     }
 
     public int treeLevelOf(UUID id) {

@@ -1,10 +1,7 @@
 package scraper.debugger.core;
 
 import scraper.api.*;
-import scraper.debugger.dto.FlowDTO;
-import scraper.debugger.dto.NodeDTO;
 
-import java.util.Map.Entry;
 import java.util.UUID;
 import java.lang.System.Logger.Level;
 
@@ -27,47 +24,46 @@ public class FlowFilter {
     }
 
     public void filter(NodeContainer<? extends Node> n, FlowMap o) {
-        UUID parent = o.getParentId().orElse(null);
-        UUID id = o.getId();
-        boolean parentPermitted = parent == null || FP.exists(parent) || !FI.exists(parent);
+        o.getParentId().ifPresent(parent -> {
+            UUID id = o.getId();
+            boolean step = false;
 
-        boolean step = false;
-
-        // check permission, inherited from parent
-        if (!parentPermitted) {
-            FP.remove(id);
-            step = true;
-        } else {
-            // check breakpoint
-            if (STATE.isBreakpoint(n.getAddress())) {
+            // check permission, inherited from parent
+            if (!FP.exists(parent) && FI.exists(parent)) {
                 FP.remove(id);
-            }
-        }
-
-        if (!FP.exists(id)) {
-            String format = step ? "STEP -> {0}" : "BREAKPOINT -> {0}";
-
-            STATE.waitOnBreakpoint(() -> {
-                STATE.l.log(Level.INFO, format, n.getAddress().getRepresentation());
-                SERVER.sendBreakpointHit(FI.getDTO(id));
-                FI.releaseBranchLock(id);
-            });
-
-            while(!FP.exists(id)) {
-                STATE.waitOnBreakpoint();
+                step = true;
+            } else {
+                // check breakpoint
+                if (STATE.isBreakpoint(n.getAddress())) {
+                    FP.remove(id);
+                }
             }
 
-            // message box
-            ACTIONS.checkLeftMessages(id);
+            if (!FP.exists(id)) {
+                String format = step ? "STEP -> {0}" : "BREAKPOINT -> {0}";
 
-            // processing continues
-            FI.acquireBranchLock(id);
+                STATE.waitOnBreakpoint(() -> {
+                    STATE.l.log(Level.INFO, format, n.getAddress().getRepresentation());
+                    SERVER.sendBreakpointHit(FI.getDTO(id));
+                    FI.releaseBranchLock(id);
+                });
 
-            checkException(n, o, false);
-            return;
-        }
+                while(!FP.exists(id)) {
+                    STATE.waitOnBreakpoint();
+                }
 
-        checkException(n, o, true);
+                // message box
+                ACTIONS.checkLeftMessages(id);
+
+                // processing continues
+                FI.acquireBranchLock(id);
+
+                checkException(n, o, false);
+                return;
+            }
+
+            checkException(n, o, true);
+        });
     }
 
     private void checkException(NodeContainer<? extends Node> n, FlowMap o, boolean sendBreak) {

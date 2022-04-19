@@ -38,7 +38,6 @@ public final class FrontendActions {
         }
     }
 
-
     //================
     // EXECUTION API
     //================
@@ -59,7 +58,7 @@ public final class FrontendActions {
     }
 
     public synchronized void requestSetBreakpoint(String address) {
-        if (executionStarted) executionSender.execute(() -> socket.send(wrap("setBreakpoint", address)));
+        executionSender.execute(() -> socket.send(wrap("setBreakpoint", address)));
     }
 
     public synchronized void requestResumeSelected(String flowIdent) {

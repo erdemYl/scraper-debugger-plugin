@@ -11,6 +11,7 @@ import org.java_websocket.server.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scraper.debugger.addon.DebuggerAddon;
+import scraper.debugger.addon.DebuggerHook;
 import scraper.debugger.dto.*;
 
 import java.lang.reflect.Method;
@@ -70,10 +71,12 @@ public final class DebuggerServer extends WebSocketServer {
         try {
             lock.lock();
             debugger = conn;
+            l.log(Level.INFO, "Debugger connected");
+            l.log(Level.INFO, "Sending specification");
+            sendSpecification(DebuggerHook.getJobInstance(), DebuggerHook.getJobCFG());
         } finally {
             lock.unlock();
         }
-        l.log(Level.INFO, "Debugger connected");
     }
 
     @Override
@@ -99,17 +102,17 @@ public final class DebuggerServer extends WebSocketServer {
             } else {
                 switch (cmd) {
                     case "stepSelected", "resumeSelected", "stopSelected", "setBreakpoint" -> {
-                        Method m = DebuggerActions.class.getMethod(cmd, String.class);
+                        Method m = DebuggerActions.class.getDeclaredMethod(cmd, String.class);
                         m.invoke(DebuggerAddon.ACTIONS, request.get("content"));
                     }
                     default -> {
-                        Method m = DebuggerActions.class.getMethod(cmd);
+                        Method m = DebuggerActions.class.getDeclaredMethod(cmd);
                         m.invoke(DebuggerAddon.ACTIONS);
                     }
                 }
             }
         } catch (Exception e) {
-            l.log(Level.WARNING, "Invalid message detected from front-end.");
+            l.log(Level.WARNING, "Invalid message detected from front-end: " + msg);
         } finally {
             lock.unlock();
         }
@@ -132,7 +135,7 @@ public final class DebuggerServer extends WebSocketServer {
     /**
      * Wraps with type "specification".
      */
-    public void sendSpecification(InstanceDTO instance, ControlFlowGraphDTO cfg) {
+    void sendSpecification(InstanceDTO instance, ControlFlowGraphDTO cfg) {
         if (debugger != null) {
             try {
                 debugger.send(wrap("specification",
@@ -148,21 +151,15 @@ public final class DebuggerServer extends WebSocketServer {
     /**
      * Wraps with types "initialFlow" or "flow".
      */
-    public void sendIdentifiedFlow(FlowDTO o) {
-        try {
-            // Why need a mutex again although this method always called with another lock?
-            sendMutex.lock();
-            if (debugger != null) {
-                try {
-                    debugger.send(wrap("identifiedFlow", Map.of(
-                            "flow", m.writeValueAsString(o))
-                    ));
-                } catch (JsonProcessingException e) {
-                    e.printStackTrace();
-                }
+    void sendIdentifiedFlow(FlowDTO f) {
+        if (debugger != null) {
+            try {
+                debugger.send(wrap("identifiedFlow", Map.of(
+                        "flow", m.writeValueAsString(f))
+                ));
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
             }
-        } finally {
-            sendMutex.unlock();
         }
     }
 
@@ -170,20 +167,15 @@ public final class DebuggerServer extends WebSocketServer {
     /**
      * Wraps with type "breakpointHit"
      */
-    public void sendBreakpointHit(FlowDTO o) {
-        try {
-            sendMutex.lock();
-            if (debugger != null) {
-                try {
-                    debugger.send(wrap("breakpointHit", Map.of(
-                            "flow", m.writeValueAsString(o))
-                    ));
-                } catch (JsonProcessingException e) {
-                    e.printStackTrace();
-                }
+    void sendBreakpointHit(FlowDTO f) {
+        if (debugger != null) {
+            try {
+                debugger.send(wrap("breakpointHit", Map.of(
+                        "flow", m.writeValueAsString(f))
+                ));
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
             }
-        } finally {
-            sendMutex.unlock();
         }
     }
 
@@ -191,20 +183,15 @@ public final class DebuggerServer extends WebSocketServer {
     /**
      * Wraps with type "finishedFlow".
      */
-    public void sendFinishedFlow(FlowDTO o) {
-        try {
-            sendMutex.lock();
-            if (debugger != null) {
-                try {
-                    debugger.send(wrap("finishedFlow", Map.of(
-                            "flow", m.writeValueAsString(o))
-                    ));
-                } catch (JsonProcessingException e) {
-                    e.printStackTrace();
-                }
+    public void sendFinishedFlow(FlowDTO f) {
+        if (debugger != null) {
+            try {
+                debugger.send(wrap("finishedFlow", Map.of(
+                        "flow", m.writeValueAsString(f))
+                ));
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
             }
-        } finally {
-            sendMutex.unlock();
         }
     }
 
@@ -235,7 +222,7 @@ public final class DebuggerServer extends WebSocketServer {
                 }
                 debugger.send(wrap("flowLifecycle", written));
             } catch (JsonProcessingException e) {
-                l.log(Level.WARNING, "Cannot send flow lifecycle");
+                l.log(Level.WARNING, "Unable to send flow lifecycle");
             }
         }
     }

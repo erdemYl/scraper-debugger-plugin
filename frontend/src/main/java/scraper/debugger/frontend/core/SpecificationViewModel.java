@@ -11,8 +11,9 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Paint;
 import javafx.util.Callback;
 import scraper.debugger.dto.ControlFlowGraphDTO;
+import scraper.debugger.dto.InstanceDTO;
+import scraper.debugger.dto.NodeDTO;
 import scraper.debugger.frontend.api.FrontendActions;
-import scraper.debugger.frontend.core.FrontendModel.QuasiStaticNode;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -25,7 +26,7 @@ public class SpecificationViewModel {
     private static final String BLUE = "-fx-background-color: lightsteelblue";
     private static final String KHAKI = "-fx-background-color: khaki";
     private static final Paint BLACK = Paint.valueOf("black");
-    private static final Paint BROWN = Paint.valueOf("brown");
+    private static final Paint BROWN = Paint.valueOf("burlywood");
 
     // Actions dependency
     private final FrontendActions ACTIONS;
@@ -33,7 +34,7 @@ public class SpecificationViewModel {
     // Quasi-static flow tree view, modified dynamically
     private final TreeView<QuasiStaticNode> QUASI_STATIC_TREE;
 
-    // Selection of nodes
+    // Selection service
     private final Service<Deque<QuasiStaticNode>> NODE_SELECTION;
 
     // Registered cells, once registered not modified
@@ -61,23 +62,47 @@ public class SpecificationViewModel {
     }
 
 
-    void view(Map<String, QuasiStaticNode> NODES, ControlFlowGraphDTO cfg) {
+    Set<QuasiStaticNode> view(InstanceDTO jobIns, ControlFlowGraphDTO jobCFG) {
+
+        Map<String, NodeDTO> nodeDTO = jobIns.getRoutes();
+        Map<String, Set<String>> outgoingAddressMap = jobCFG.getOutgoingAddressMap();
+        Set<String> endNodes = jobCFG.getEndNodes();
+        String start = jobCFG.getStart();
+
+        // root
+        QuasiStaticNode rootNode = QuasiStaticNode.createFrom(
+                nodeDTO.get(start),
+                endNodes.contains(start)
+        );
+        TreeItem<QuasiStaticNode> root = new TreeItem<>(rootNode);
+
+        // all nodes
+        Set<QuasiStaticNode> NODES = new HashSet<>();
+        NODES.add(rootNode);
+
+        recursiveViewer(root, NODES, nodeDTO, outgoingAddressMap, outgoingAddressMap.get(start), endNodes);
+
         Platform.runLater(() -> {
-            Map<String, Set<String>> outgoingAddressMap = cfg.getOutgoingAddressMap();
-            String start = cfg.getStart();
-            TreeItem<QuasiStaticNode> root = new TreeItem<>();
-            root.setValue(NODES.get(start));
-            recursiveViewer(root, NODES, outgoingAddressMap, outgoingAddressMap.get(start));
-            QUASI_STATIC_TREE.setRoot(root);
-            QUASI_STATIC_TREE.setShowRoot(true);
-            // write connected
+            synchronized (this) {
+                QUASI_STATIC_TREE.setRoot(root);
+                QUASI_STATIC_TREE.setShowRoot(true);
+            }
         });
+
+        return NODES;
     }
 
     Optional<QuasiStaticNode> parentOf(QuasiStaticNode node) {
-        TreeCell<QuasiStaticNode> cell = CELLS.get(node);
-        TreeItem<QuasiStaticNode> parent = cell.getTreeItem().getParent();
-        return parent == null ? Optional.empty() : Optional.of(parent.getValue());
+        synchronized (this) {
+            TreeCell<QuasiStaticNode> cell = CELLS.get(node);
+            if (cell == null) return Optional.empty();
+            TreeItem<QuasiStaticNode> parent = cell.getTreeItem().getParent();
+            return parent == null ? Optional.empty() : Optional.of(parent.getValue());
+        }
+    }
+
+    QuasiStaticNode getRoot() {
+        return QUASI_STATIC_TREE.getRoot().getValue();
     }
 
     /**
@@ -91,14 +116,23 @@ public class SpecificationViewModel {
 
 
     private void recursiveViewer(TreeItem<QuasiStaticNode> parent,
-                                 Map<String, QuasiStaticNode> NODES,
+                                 Set<QuasiStaticNode> NODES,
+                                 Map<String, NodeDTO> nodeDTO,
                                  Map<String, Set<String>> outgoingAddressMap,
-                                 Set<String> outgoings) {
+                                 Set<String> outgoings,
+                                 Set<String> endNodes)
+    {
+        parent.setExpanded(true);
         for (String out : outgoings) {
             TreeItem<QuasiStaticNode> child = new TreeItem<>();
-            child.setValue(NODES.get(out));
-            Platform.runLater(() -> parent.getChildren().add(child));
-            recursiveViewer(child, NODES, outgoingAddressMap, outgoingAddressMap.get(out));
+            QuasiStaticNode node = QuasiStaticNode.createFrom(
+                    nodeDTO.get(out),
+                    endNodes.contains(out)
+            );
+            NODES.add(node);
+            child.setValue(node);
+            parent.getChildren().add(child);
+            recursiveViewer(child, NODES, nodeDTO, outgoingAddressMap, outgoingAddressMap.get(out), endNodes);
         }
     }
 
@@ -155,6 +189,12 @@ public class SpecificationViewModel {
                     @Override
                     protected void succeeded() {
                         MODEL.takeSelectedNodes(getValue());
+                        reset();
+                    }
+
+                    @Override
+                    protected void failed() {
+                        reset();
                     }
                 };
             }
@@ -164,11 +204,9 @@ public class SpecificationViewModel {
 
     private void createCellFactory() {
 
-        final Pattern pattern = Pattern.compile("\\.");
-
         QUASI_STATIC_TREE.setCellFactory(new Callback<>() {
 
-            final Pattern nodeNamePattern = pattern;
+            final Pattern nodeNamePattern = Pattern.compile("\\.");
 
             @Override
             public TreeCell<QuasiStaticNode> call(TreeView<QuasiStaticNode> treeView) {
@@ -178,8 +216,8 @@ public class SpecificationViewModel {
                         super.updateItem(node, empty);
                         if (empty) {
                             setText(null);
-                            setStyle(null);
                             setOnMouseClicked(null);
+                            setStyle(null);
                         } else {
                             String address = node.toString();
                             int last = nodeNamePattern.split(address)[0].length();

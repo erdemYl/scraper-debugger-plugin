@@ -1,8 +1,10 @@
 package scraper.debugger.frontend.core;
 
+import javafx.application.Platform;
 import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
@@ -12,7 +14,6 @@ import javafx.scene.control.*;
 import javafx.scene.paint.Paint;
 import javafx.util.Callback;
 import scraper.debugger.dto.FlowDTO;
-import scraper.debugger.frontend.core.FrontendModel.QuasiStaticNode;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -41,16 +42,16 @@ public class ValuesViewModel {
     // Properties
     private final StringProperty waitingFlowNumber = new SimpleStringProperty("Waiting: 0");
     private final StringProperty processedFlowNumber = new SimpleStringProperty("Processed: 0");
-    private final ObservableList<FlowDTO> currentViewedFlows = new SimpleListProperty<>();
-    private final ObservableList<String> currentViewedMap = new SimpleListProperty<>();
+    private final ObservableList<FlowDTO> currentViewedFlows = FXCollections.observableArrayList();
+    private final ObservableList<String> currentViewedMap = FXCollections.observableArrayList();
 
 
     ValuesViewModel(FrontendModel MODEL, TableView<FlowDTO> valueTable, ListView<String> flowMap) {
         this.MODEL = MODEL;
         VALUES = valueTable;
         MAP = flowMap;
-        VALUES.itemsProperty().setValue(currentViewedFlows);
-        MAP.itemsProperty().set(currentViewedMap);
+        VALUES.setItems(currentViewedFlows);
+        MAP.setItems(currentViewedMap);
 
         String style = "-fx-background-color: burlywood; -fx-border-color:  #896436; -fx-border-width: 2";
         waitingColumn.setStyle(style);
@@ -93,7 +94,7 @@ public class ValuesViewModel {
         });
     }
 
-    void createValueColumns(Collection<QuasiStaticNode> NODES) {
+    void createValueColumns(Set<QuasiStaticNode> NODES) {
         NODES.forEach(node -> {
             node.dataStreamKey().ifPresent(key -> {
                 TableColumn<FlowDTO, String> valueColumn = new TableColumn<>(key);
@@ -108,8 +109,7 @@ public class ValuesViewModel {
     }
 
     void viewValues(Deque<QuasiStaticNode> selectedNodes) {
-        Objects.requireNonNull(selectedNodes);
-        currentSelectedNodes = selectedNodes;
+        currentSelectedNodes = Objects.requireNonNull(selectedNodes);
         VALUE_VIEW.start();
     }
 
@@ -129,20 +129,21 @@ public class ValuesViewModel {
                                 // new value factories for static columns
                                 waitingColumn.setCellValueFactory(features -> {
                                     FlowDTO f = features.getValue();
-                                    if (node.departed(f)) {
+                                    if (!node.departed(f)) {
                                         return new SimpleStringProperty(f.getIdent());
                                     }
                                     return new SimpleStringProperty("");
                                 });
                                 processedColumn.setCellValueFactory(features -> {
                                     FlowDTO f = features.getValue();
-                                    if (!node.departed(f)) {
+                                    if (node.departed(f)) {
                                         return new SimpleStringProperty(f.getIdent());
                                     }
                                     return new SimpleStringProperty("");
                                 });
 
                                 // find usable columns for this marking
+                                currentSelectedNodes.pollLast();
                                 List<TableColumn<FlowDTO, String>> usableColumns = currentSelectedNodes.stream()
                                         .map(valueColumns::get)
                                         .filter(Objects::nonNull)
@@ -150,23 +151,42 @@ public class ValuesViewModel {
 
                                 // Renew items and add columns
                                 ObservableList<TableColumn<FlowDTO, ?>> currentViewedColumns = VALUES.getColumns();
-                                currentViewedFlows.clear();
-                                currentViewedColumns.clear();
-                                currentViewedColumns.addAll(List.of(waitingColumn, processedColumn));
-                                currentViewedColumns.addAll(usableColumns);
 
+                                Platform.runLater(() -> {
+                                    currentViewedFlows.clear();
+                                    currentViewedColumns.clear();
+                                    currentViewedColumns.addAll(List.of(waitingColumn, processedColumn));
+                                    currentViewedColumns.addAll(usableColumns);
+                                });
                                 Set<FlowDTO> arrivals = node.arrivals();
                                 Set<FlowDTO> departures = node.departures();
-                                currentViewedFlows.addAll(arrivals);
-                                currentViewedFlows.addAll(departures);
 
-                                waitingFlowNumber.setValue("Waiting: " + arrivals.size());
-                                processedFlowNumber.setValue("Processed: " + departures.size());
+                                Platform.runLater(() -> {
+                                    currentViewedFlows.addAll(arrivals);
+                                    currentViewedFlows.addAll(departures);
+                                });
+
+
+                                Platform.runLater(() -> {
+                                    waitingFlowNumber.setValue("Waiting: " + arrivals.size());
+                                    processedFlowNumber.setValue("Processed: " + departures.size());
+                                });
+
                             }
                         }
                         return currentSelectedNodes;
                     }
                 };
+            }
+
+            @Override
+            protected void succeeded() {
+                reset();
+            }
+
+            @Override
+            protected void failed() {
+                reset();
             }
         };
     }

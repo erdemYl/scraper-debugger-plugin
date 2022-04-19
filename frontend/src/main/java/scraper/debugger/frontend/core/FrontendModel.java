@@ -1,8 +1,5 @@
 package scraper.debugger.frontend.core;
 
-import javafx.application.Platform;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TableView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
@@ -10,20 +7,19 @@ import javafx.scene.shape.Line;
 import scraper.debugger.dto.ControlFlowGraphDTO;
 import scraper.debugger.dto.FlowDTO;
 import scraper.debugger.dto.InstanceDTO;
-import scraper.debugger.dto.NodeDTO;
 import scraper.debugger.frontend.api.FrontendWebSocket;
 import scraper.debugger.frontend.api.FrontendActions;
+import scraper.debugger.tree.Trie;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+
 
 public class FrontendModel extends FrontendWebSocket {
 
-    // Quasi-static nodes, not modified once set // address -> node
-    private final Map<String, QuasiStaticNode> NODES = new HashMap<>();
+    // Complete quasi-static flow tree of the program
+    private final Trie<QuasiStaticNode> QUASI_STATIC_TREE = new Trie<>();
+
+    private final Map<QuasiStaticNode, Map<String, QuasiStaticNode>> fromToNode = new HashMap<>();
 
     // Displayed quasi-static flow tree, modified dynamically
     private final TreePane QUASI_STATIC_TREE_PANE;
@@ -51,19 +47,31 @@ public class FrontendModel extends FrontendWebSocket {
 
 
     @Override
-    public void takeSpecification(InstanceDTO jobIns, ControlFlowGraphDTO jobCFG) {
-        Set<String> endNodes = jobCFG.getEndNodes();
+    protected void takeSpecification(InstanceDTO jobIns, ControlFlowGraphDTO jobCFG) {
 
-        /* Create all quasi-static nodes */
-        jobIns.getRoutes().forEach(((address, n) -> {
-            NODES.put(address, new QuasiStaticNode(n, endNodes.contains(address)));
-        }));
+        /* Quasi-static nodes are created and viewed */
+        Set<QuasiStaticNode> viewedNodes = SPECIFICATION.view(jobIns, jobCFG);
 
         /* Create for each data stream key a value column */
-        VALUES.createValueColumns(NODES.values());
+        VALUES.createValueColumns(viewedNodes);
 
         /* Define for each node's circle its click action */
-        NODES.forEach((address, node) -> {
+        viewedNodes.forEach(node -> {
+            SPECIFICATION.parentOf(node).ifPresentOrElse(
+                    parent -> {
+                        fromToNode.compute(parent, (p, map) -> {
+                            if (map == null) {
+                                return new HashMap<>(Map.of(node.toString(), node));
+                            }
+                            map.put(node.toString(), node);
+                            return map;
+                        });
+                    },
+                    () -> {
+                        // root node
+                        fromToNode.putIfAbsent(node, new HashMap<>(4));
+                    }
+            );
 
             Circle circle = node.circle;
 
@@ -81,43 +89,46 @@ public class FrontendModel extends FrontendWebSocket {
                 }
             });
         });
-        SPECIFICATION.view(NODES, jobCFG);
     }
 
     @Override
-    public void takeIdentifiedFlow(FlowDTO f) {
-        QuasiStaticNode node = NODES.get(f.getIntoAddress());
-        SPECIFICATION.parentOf(node).ifPresentOrElse(
-                parent -> {
-                    if (!node.isOnScreen()) {
-                        Line line = QUASI_STATIC_TREE_PANE.put(parent.circle, node.circle);
-                        parent.addOutgoingLine(node, line);
-                        node.setOnScreen();
-                    }
-                    parent.addDeparture(f.getParentIdent());
-                },
-                () -> {
-                    // initial flow, no parent
-                    QUASI_STATIC_TREE_PANE.putInitial(node.circle);
-                    node.setOnScreen();
-                }
-        );
-    }
+    protected void takeIdentifiedFlow(FlowDTO f) {
+        QuasiStaticNode node;
+        if (QUASI_STATIC_TREE.isEmpty()) {
+            node = SPECIFICATION.getRoot();
+            QUASI_STATIC_TREE.put("i", node);
+            QUASI_STATIC_TREE_PANE.putInitial(node.circle);
+            node.setOnScreen();
 
-    @Override
-    public void takeBreakpointHit(FlowDTO f) {
-        QuasiStaticNode node = NODES.get(f.getIntoAddress());
-        Platform.runLater(() -> node.circle.setFill(Paint.valueOf("black")));
+        } else {
+            String parent = f.getParentIdent();
+            QuasiStaticNode parentNode = QUASI_STATIC_TREE.get(parent);
+            node = fromToNode.get(parentNode).get(f.getIntoAddress());
+            if (!node.isOnScreen()) {
+                Line line = QUASI_STATIC_TREE_PANE.put(parentNode.circle, node.circle);
+                parentNode.addOutgoingLine(node, line);
+                node.setOnScreen();
+            }
+            QUASI_STATIC_TREE.put(f.getIdent(), node);
+            parentNode.addDeparture(parent);
+        }
+
         node.addArrival(f);
     }
 
     @Override
-    public void takeFinishedFlow(FlowDTO f) {
+    protected void takeBreakpointHit(FlowDTO f) {
+        QuasiStaticNode node = QUASI_STATIC_TREE.get(f.getIdent());
+        node.circle.setFill(Paint.valueOf("darksalmon"));
     }
 
     @Override
-    public void takeLogMessage(String log) {
-        CONTROL.logTextArea.appendText(log.substring(13));
+    protected void takeFinishedFlow(FlowDTO f) {
+    }
+
+    @Override
+    protected void takeLogMessage(String log) {
+        //CONTROL.logTextArea.appendText(log.substring(13));
     }
 
 
@@ -138,115 +149,4 @@ public class FrontendModel extends FrontendWebSocket {
         return Optional.ofNullable(CURRENT_SELECTED_FLOW);
     }
 
-
-    static final class QuasiStaticNode {
-
-        // Arriving flows to this node
-        private final Map<String, FlowDTO> arrivals = new ConcurrentHashMap<>();
-
-        // Departing flows from this node
-        private final Set<FlowDTO> departures = ConcurrentHashMap.newKeySet();
-
-        // Tree pane circle
-        private final Circle circle;
-
-        // Whether this node now on screen is
-        private final AtomicBoolean onScreen = new AtomicBoolean(false);
-
-        // Outgoing lines to other nodes, set during runtime // node -> Line
-        private final Map<QuasiStaticNode, Line> outgoingLines = new HashMap<>(4);
-
-        // In which key this node emits new data, if not, null
-        private final String dataStreamKey;
-
-        private final String nodeAddress;
-        private final String nodeType;
-        private final boolean isEndNode;
-
-        private QuasiStaticNode(NodeDTO n, boolean isEndNode) {
-            circle = new Circle(9);
-            this.nodeAddress = n.getAddress();
-            this.nodeType = n.getType();
-            this.isEndNode = isEndNode;
-            switch (nodeType) {
-                case "IntRange" -> dataStreamKey = (String) n.getNodeConfiguration().get("output");
-                case "Map" -> dataStreamKey = (String) n.getNodeConfiguration().get("putElement");
-                default -> dataStreamKey = null;
-            }
-        }
-
-        private void addArrival(FlowDTO f) {
-            arrivals.put(f.getIdent(), f);
-        }
-
-        private void addDeparture(String ident) {
-            arrivals.computeIfPresent(ident, (i, f) -> {
-               departures.add(f);
-               return null;
-            });
-        }
-
-        private void addOutgoingLine(QuasiStaticNode other, Line line) {
-            synchronized (outgoingLines) {
-                outgoingLines.put(other, line);
-            }
-        }
-
-        private void setOnScreen() {
-            synchronized (onScreen) {
-                onScreen.set(true);
-            }
-        }
-
-        Set<FlowDTO> arrivals() {
-            return arrivals.values().stream().collect(Collectors.toUnmodifiableSet());
-        }
-
-        Set<FlowDTO> departures() {
-            return Collections.unmodifiableSet(departures);
-        }
-
-        boolean departed(FlowDTO f) {
-            return departures.contains(f);
-        }
-
-        boolean isOnScreen() {
-            synchronized (onScreen) {
-                return onScreen.get();
-            }
-        }
-
-        String getType() {
-            return nodeType;
-        }
-
-        Optional<Line> lineTo(QuasiStaticNode other) {
-            synchronized (outgoingLines) {
-                // always line not null
-                return Optional.ofNullable(outgoingLines.get(other));
-            }
-        }
-
-        Optional<String> dataStreamKey() {
-            return Optional.ofNullable(dataStreamKey);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o instanceof QuasiStaticNode) {
-                return this.toString().equals(o.toString());
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return nodeAddress.hashCode();
-        }
-
-        @Override
-        public String toString() {
-            return nodeAddress;
-        }
-    }
 }
