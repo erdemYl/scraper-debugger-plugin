@@ -3,19 +3,10 @@ package scraper.debugger.tree;
 import java.util.*;
 
 /**
- * Implementation of a trie a.k.a. radix tree.
- *
- * Primarily used for storing flows efficiently within a tree structure.
- * Since debugger generates for each flow a unique IDENT (string) that is related to
- * its parent IDENT, storing these IDENTs generates a radix tree by itself.
- *
- * Whole implementation belongs to me, which I have implemented in "Programmierpraktikum 2021" in TU KL.
- * Other data retrieval methods are added like "getValuesOn", "getDirectChildValuesOf", "getLongestMatchedEntry"
- * to get a flow's lifecycle, that is IDENT_1,...,IDENT_n, where IDENT_i are the keys of its parents.
- *
- * @param <V> is the type of the stored values.
+ * Simple implementation of a prefix tree without any node compression or space efficiency.
+ * Based on dynamically growing radix mechanism in each node, with the help of java hash maps.
  */
-public class Trie<V> implements MapI<String, V> {
+public class Trie<V> implements PrefixTree<V> {
     private final TrieNode<V> headNode;
     private final Set<String> keys;
     private static final int INITIAL_RADIX_LENGTH = 4;
@@ -81,7 +72,10 @@ public class Trie<V> implements MapI<String, V> {
                 return;
             }
 
-            if (storeKeys) keys.add(key);
+            if (storeKeys) {
+                assert keys != null;
+                keys.add(key);
+            }
             size++;
 
             char[] chars = key.toCharArray();
@@ -206,8 +200,8 @@ public class Trie<V> implements MapI<String, V> {
      * Fills given set with keys, which have
      * as prefix the given prefix.
      *
-     * TODO: implement a more efficient algorithm
      */
+    @Override
     public void prefixKeys(String prefix, Set<String> set) {
         synchronized (mutex) {
             if (set != null) {
@@ -249,6 +243,7 @@ public class Trie<V> implements MapI<String, V> {
         }
     }
 
+    @Override
     public void prefixValues(String prefix, Set<V> set) {
         synchronized (mutex) {
             if (set != null) {
@@ -291,11 +286,7 @@ public class Trie<V> implements MapI<String, V> {
         }
     }
 
-
-    /**
-     * Gets all values which are saved on the way of given key.
-     * If key is not available or null, returns empty list.
-     */
+    @Override
     public List<V> getValuesOn(String key) {
         synchronized (mutex) {
             if (key == null || key.isEmpty()) return List.of();
@@ -317,6 +308,37 @@ public class Trie<V> implements MapI<String, V> {
             return values.stream().toList();
         }
     }
+
+    @Override
+    public Map.Entry<String, V> getLongestMatchedEntry(String key) {
+        synchronized (mutex) {
+            if (key == null) return null;
+
+            char[] input = key.toCharArray();
+            Node<V> n = headNode;
+            EndNode<V> longest = null;
+            int last = 0;
+            for (int i = 0; i < input.length; i++) {
+                try {
+                    n = n.shift(input[i]);
+                    if (n.isEndNode()) {
+                        longest = (EndNode<V>) n;
+                        last = i;
+                    }
+                } catch (NoStateFound e) {
+                    break;
+                }
+            }
+
+            if (longest == null) return null;
+            else {
+                return new AbstractMap.SimpleImmutableEntry<>(
+                        Arrays.toString(Arrays.copyOf(input, last + 1)),
+                        longest.getValue());
+            }
+        }
+    }
+
 
     @SuppressWarnings("Duplicates")
     public List<String> getDirectChildKeysOf(String key) {
@@ -376,35 +398,6 @@ public class Trie<V> implements MapI<String, V> {
         }
     }
 
-    public Map.Entry<String, V> getLongestMatchedEntry(String key) {
-        synchronized (mutex) {
-            if (key == null) return null;
-
-            char[] input = key.toCharArray();
-            Node<V> n = headNode;
-            EndNode<V> longest = null;
-            int last = 0;
-            for (int i = 0; i < input.length; i++) {
-                try {
-                    n = n.shift(input[i]);
-                    if (n.isEndNode()) {
-                        longest = (EndNode<V>) n;
-                        last = i;
-                    }
-                } catch (NoStateFound e) {
-                    break;
-                }
-            }
-
-            if (longest == null) return null;
-            else {
-                return new AbstractMap.SimpleImmutableEntry<>(
-                        Arrays.toString(Arrays.copyOf(input, last + 1)),
-                        longest.getValue());
-            }
-        }
-    }
-
 
     public boolean isEmpty() {
         synchronized (mutex) {
@@ -413,7 +406,8 @@ public class Trie<V> implements MapI<String, V> {
     }
 
 
-    public boolean containsKey(String key) {
+    @Override
+    public boolean contains(String key) {
         return get(key) != null;
     }
 
@@ -651,12 +645,4 @@ public class Trie<V> implements MapI<String, V> {
 }
 
 class NoStateFound extends Exception {
-}
-
-interface MapI<K, V> {
-    V get(K key);
-    void put(K key, V value);
-    void remove(K key);
-    int size();
-    void keys(K[] array);
 }

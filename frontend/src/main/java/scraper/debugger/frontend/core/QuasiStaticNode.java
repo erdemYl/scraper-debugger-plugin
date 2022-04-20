@@ -1,9 +1,11 @@
 package scraper.debugger.frontend.core;
 
+import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.StrokeType;
 import scraper.debugger.dto.FlowDTO;
 import scraper.debugger.dto.NodeDTO;
 
@@ -32,6 +34,10 @@ public final class QuasiStaticNode {
     final TreeItem<QuasiStaticNode> treeItem;
 
 
+    // Tree cell for specification view-model
+    volatile TreeCell<QuasiStaticNode> treeCell = null;
+
+
     // Whether this node now on screen is
     private final AtomicBoolean onScreen = new AtomicBoolean(false);
 
@@ -52,6 +58,7 @@ public final class QuasiStaticNode {
         circle = new Circle(9);
         circle.setFill(Paint.valueOf("burlywood"));
         if (endNode) {
+            circle.setStrokeType(StrokeType.INSIDE);
             circle.setStrokeWidth(2);
             circle.setStroke(Paint.valueOf("#896436"));
         }
@@ -67,7 +74,8 @@ public final class QuasiStaticNode {
         }
     }
 
-    public static QuasiStaticNode createFrom(NodeDTO n, boolean isEndNode) {
+    /* Static factory method to enhance readability */
+    static QuasiStaticNode createFrom(NodeDTO n, boolean isEndNode) {
         return new QuasiStaticNode(n, isEndNode);
     }
 

@@ -203,10 +203,6 @@ public class ValuesViewModel {
                                 Platform.runLater(() -> {
                                     currentViewedFlows.addAll(arrivals);
                                     currentViewedFlows.addAll(departures);
-                                });
-
-
-                                Platform.runLater(() -> {
                                     waitingFlowNumber.setValue("Waiting: " + arrivals.size());
                                     processedFlowNumber.setValue("Processed: " + departures.size());
                                 });

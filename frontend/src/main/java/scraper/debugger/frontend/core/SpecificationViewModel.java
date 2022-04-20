@@ -7,8 +7,8 @@ import javafx.scene.control.Cell;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Paint;
+import javafx.scene.shape.Line;
 import javafx.util.Callback;
 import scraper.debugger.dto.ControlFlowGraphDTO;
 import scraper.debugger.dto.InstanceDTO;
@@ -16,6 +16,7 @@ import scraper.debugger.dto.NodeDTO;
 import scraper.debugger.frontend.api.FrontendActions;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -37,17 +38,17 @@ public class SpecificationViewModel {
     // Selection service
     private final Service<Deque<QuasiStaticNode>> NODE_SELECTION;
 
-    // Registered cells, once registered not modified
-    private final Map<QuasiStaticNode, TreeCell<QuasiStaticNode>> CELLS = new HashMap<>();
+    // Newly marked cells
+    private final Map<QuasiStaticNode, TreeCell<QuasiStaticNode>> MARKED_CELLS = new HashMap<>();
 
-    // Fresh selected cells
-    private final Deque<TreeCell<QuasiStaticNode>> SELECTED_CELLS = new LinkedList<>();
+    // Newly marked lines
+    private final Collection<Line> MARKED_LINES = new LinkedList<>();
 
     // Defined breakpoints
     private final Set<QuasiStaticNode> BREAKPOINTS = new HashSet<>();
 
     // Selecting nodes until this
-    private TreeCell<QuasiStaticNode> current = null;
+    private QuasiStaticNode current = null;
 
 
     /**
@@ -97,8 +98,7 @@ public class SpecificationViewModel {
      * Designed to response user events for node selection.
      */
     void selectNodesUntil(QuasiStaticNode node) {
-        Objects.requireNonNull(node);
-        current = CELLS.get(node);
+        current = Objects.requireNonNull(node);
         NODE_SELECTION.start();
     }
 
@@ -131,46 +131,45 @@ public class SpecificationViewModel {
                 return new Task<>() {
                     @Override
                     protected Deque<QuasiStaticNode> call() {
-                        /* re-color old cell way */
-                        TreeCell<QuasiStaticNode> someCell = SELECTED_CELLS.pollFirst();
-                        if (someCell != null) {
-                            QuasiStaticNode someNode = someCell.getItem();
-                            someCell.setStyle(breakpoint(someNode) ? BLUE : null);
-                            while (!SELECTED_CELLS.isEmpty()) {
-                                TreeCell<QuasiStaticNode> otherCell = SELECTED_CELLS.pop();
-                                QuasiStaticNode otherNode = otherCell.getItem();
-                                otherCell.setStyle(breakpoint(otherNode) ? BLUE : null);
-                                // color line
-                                someNode.lineTo(otherNode).ifPresent(line -> {
-                                    line.setStrokeWidth(1);
-                                    line.setStroke(BLACK);
-                                });
-                                someNode = otherNode;
-                            }
-                        }
 
-                        /* select and color new cell way */
-                        current.setStyle(breakpoint(current.getItem()) ? BLUE : KHAKI);
-                        SELECTED_CELLS.add(current);
+                        // Clear old way
+                        MARKED_CELLS.forEach((qsn, cell) -> cell.setStyle(breakpoint(qsn) ? BLUE : null));
+                        MARKED_LINES.forEach(line -> {
+                            line.setStrokeWidth(1);
+                            line.setStroke(BLACK);
+                        });
+                        MARKED_CELLS.clear();
+                        MARKED_LINES.clear();
 
-                        QuasiStaticNode node = current.getItem();
-                        TreeItem<QuasiStaticNode> parent = current.getTreeItem().getParent();
-                        while (parent != null) {
-                            QuasiStaticNode parentNode = parent.getValue();
-                            TreeCell<QuasiStaticNode> parentCell = CELLS.get(parentNode);
-                            parentCell.setStyle(breakpoint(parentNode) ? BLUE : KHAKI);
-                            SELECTED_CELLS.addFirst(parentCell);
-                            // color line
-                            parentNode.lineTo(node).ifPresent(line -> {
+                        // New node way with new line markings
+                        Deque<QuasiStaticNode> nodesUntilCurrent = new LinkedList<>(List.of(current));
+                        QuasiStaticNode node = current;
+                        Optional<QuasiStaticNode> parent = node.getParent();
+                        boolean cellWayExists = node.treeCell != null;
+
+                        while(parent.isPresent()) {
+                            QuasiStaticNode pNode = parent.get();
+                            pNode.lineTo(node).ifPresent(line -> {
                                 line.setStrokeWidth(3);
                                 line.setStroke(BROWN);
+                                MARKED_LINES.add(line);
                             });
-                            node = parentNode;
-                            parent = parent.getParent();
+                            nodesUntilCurrent.addFirst(pNode);
+                            node = pNode;
+                            parent = pNode.getParent();
+                            cellWayExists = node.treeCell != null;
                         }
-                        return SELECTED_CELLS.stream()
-                                .map(Cell::getItem)
-                                .collect(Collectors.toCollection(LinkedList::new));
+
+                        // Marking cells on the new way
+                        if (cellWayExists) {
+                            nodesUntilCurrent.forEach(qsn -> {
+                                TreeCell<QuasiStaticNode> cell = qsn.treeCell;
+                                cell.setStyle(breakpoint(qsn) ? BLUE : KHAKI);
+                                MARKED_CELLS.put(qsn, cell);
+                            });
+                        }
+
+                        return nodesUntilCurrent;
                     }
 
                     @Override
@@ -187,7 +186,6 @@ public class SpecificationViewModel {
             }
         };
     }
-
 
     private void createCellFactory() {
 
@@ -209,7 +207,7 @@ public class SpecificationViewModel {
                             String address = node.toString();
                             int last = nodeNamePattern.split(address)[0].length();
                             setText("(" + node.getType() + ") " + address.substring(last + 1));
-                            CELLS.put(node, this);
+                            node.treeCell = this;
 
                             // Event handler for this cell
                             setOnMouseClicked(e -> {

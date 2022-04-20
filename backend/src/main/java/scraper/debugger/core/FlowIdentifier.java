@@ -2,12 +2,11 @@ package scraper.debugger.core;
 
 import scraper.api.*;
 import scraper.debugger.dto.FlowDTO;
+import scraper.debugger.tree.PrefixTree;
 import scraper.debugger.tree.Trie;
 
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -23,7 +22,7 @@ public class FlowIdentifier {
 
 
     // Quasi-static flow tree
-    private final Trie<IdentifiedFlow> quasiStaticTree = new Trie<>();
+    private final PrefixTree<IdentifiedFlow> quasiStaticTree = new Trie<>();
 
 
     // Branch lock provider

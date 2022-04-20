@@ -10,6 +10,7 @@ import scraper.debugger.dto.FlowDTO;
 import scraper.debugger.dto.InstanceDTO;
 import scraper.debugger.frontend.api.FrontendWebSocket;
 import scraper.debugger.frontend.api.FrontendActions;
+import scraper.debugger.tree.PrefixTree;
 import scraper.debugger.tree.Trie;
 
 import java.util.*;
@@ -18,7 +19,7 @@ import java.util.*;
 public class FrontendModel extends FrontendWebSocket {
 
     // Complete quasi-static flow tree of the program
-    private final Trie<QuasiStaticNode> TREE = new Trie<>();
+    private final PrefixTree<QuasiStaticNode> TREE = new Trie<>();
 
     // How nodes are connected, n1 -> map(n2.address, n2)
     private final Map<QuasiStaticNode, Map<String, QuasiStaticNode>> EDGES = new HashMap<>();
