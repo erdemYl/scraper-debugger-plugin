@@ -39,7 +39,7 @@ public class SpecificationViewModel {
     private final Collection<Line> MARKED_LINES = new LinkedList<>();
 
     // Defined breakpoints
-    private final Set<QuasiStaticNode> breakpoints = new HashSet<>();
+    private final Set<QuasiStaticNode> breakpoints = Collections.synchronizedSet(new HashSet<>());
 
     // Selected node from user
     private QuasiStaticNode current = null;
