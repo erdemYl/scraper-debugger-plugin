@@ -4,7 +4,7 @@ import scraper.debugger.addon.DebuggerAddon;
 import scraper.debugger.addon.DebuggerHook;
 import scraper.debugger.addon.WaitHook;
 
-open module debugger.backend {
+open module scraper.debugger {
     // scraper
     requires scraper.api;
     requires scraper.utils;

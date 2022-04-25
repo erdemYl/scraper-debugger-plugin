@@ -17,7 +17,7 @@ public final class DebuggerActions {
     private final System.Logger.Level info = System.Logger.Level.INFO;
 
     // Frontend left-messages
-    private final LeftMessages leftMessages;
+    private final Set<UUID> leftMessages;
 
     // Debugger components
     private final DebuggerServer SERVER;
@@ -30,75 +30,15 @@ public final class DebuggerActions {
         this.STATE = STATE;
         this.FI = FI;
         this.FP = FP;
-        leftMessages = new LeftMessages(FP);
+        leftMessages = ConcurrentHashMap.newKeySet();
     }
-
-    private static final class LeftMessages {
-
-        final Map<UUID, String> messages = new ConcurrentHashMap<>();
-        final Map<UUID, LeftMsgType> types = new ConcurrentHashMap<>();
-        final FlowPermissions FP;
-
-        LeftMessages(FlowPermissions FP) {
-            this.FP = FP;
-        }
-
-        void addStopMsg(UUID id) {
-            messages.putIfAbsent(id, "");
-            types.putIfAbsent(id, LeftMsgType.STOP);
-        }
-
-        void consumeMsgFor(UUID id) {
-            types.computeIfPresent(id, (i, t) -> {
-                messages.remove(id);
-                switch (t) {
-                    case STOP -> {
-                        FP.remove(id);
-                        return null;
-                    }
-                    case ABORT -> {
-                        System.getLogger("Debugger").log(
-                                System.Logger.Level.WARNING, "Aborting"
-                        );
-                        Thread.currentThread().interrupt();
-                    }
-                }
-                return t;
-            });
-        }
-
-        boolean nodeChangeOrAbort(UUID id) {
-            LeftMsgType type = types.get(id);
-            if (type == null) return false;
-            switch (type) {
-                case CHANGE_NODE_DEF, CHANGE_NODE_CONFIG, ABORT -> {
-                    return true;
-                }
-                default -> {
-                    return false;
-                }
-            }
-        }
-    }
-
-    private enum LeftMsgType {
-        STOP,
-        CHANGE_NODE_CONFIG,
-        CHANGE_NODE_DEF,
-        ABORT
-    }
-
 
     void checkLeftMessages(UUID id) {
-        leftMessages.consumeMsgFor(id);
+        if (leftMessages.remove(id))
+            FP.remove(id);
     }
 
-
     boolean checkChangeOrAbortMsg(UUID id) {
-        if (leftMessages.nodeChangeOrAbort(id)) {
-            leftMessages.consumeMsgFor(id);
-            return true;
-        }
         return false;
     }
 
@@ -132,14 +72,14 @@ public final class DebuggerActions {
 
     void stepAll() {
         FI.forEachIdentified(id -> {
-            leftMessages.addStopMsg(id);
+            leftMessages.add(id);
             FP.create(id);
         });
     }
 
     void stepSelected(String ident) {
         UUID id = FI.toUUID(ident);
-        leftMessages.addStopMsg(id);
+        leftMessages.add(id);
         FP.create(id);
     }
 

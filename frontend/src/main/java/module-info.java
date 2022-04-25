@@ -1,7 +1,7 @@
 import scraper.api.Hook;
 import scraper.debugger.frontend.hook.*;
 
-open module debugger.frontend {
+open module scraper.debugger.frontend {
     requires scraper.api;
     requires scraper.utils;
 
@@ -22,7 +22,7 @@ open module debugger.frontend {
     requires javafx.fxml;
 
     // backend
-    requires debugger.backend;
+    requires scraper.debugger;
 
     exports scraper.debugger.frontend.api;
 

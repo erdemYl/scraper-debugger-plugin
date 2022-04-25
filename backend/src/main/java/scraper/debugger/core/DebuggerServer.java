@@ -148,9 +148,9 @@ public final class DebuggerServer extends WebSocketServer {
 
 
     /**
-     * Wraps with types "initialFlow" or "flow".
+     * Wraps with type "identifiedFlow".
      */
-    void sendIdentifiedFlow(FlowDTO f) {
+    void sendIdentifiedFlow(DataflowDTO f) {
         if (debugger != null) {
             try {
                 debugger.send(wrap("identifiedFlow", Map.of(
@@ -166,7 +166,7 @@ public final class DebuggerServer extends WebSocketServer {
     /**
      * Wraps with type "breakpointHit"
      */
-    void sendBreakpointHit(FlowDTO f) {
+    void sendBreakpointHit(DataflowDTO f) {
         if (debugger != null) {
             try {
                 debugger.send(wrap("breakpointHit", Map.of(
@@ -182,7 +182,7 @@ public final class DebuggerServer extends WebSocketServer {
     /**
      * Wraps with type "finishedFlow".
      */
-    public void sendFinishedFlow(FlowDTO f) {
+    public void sendFinishedFlow(DataflowDTO f) {
         if (debugger != null) {
             try {
                 debugger.send(wrap("finishedFlow", Map.of(
@@ -212,11 +212,11 @@ public final class DebuggerServer extends WebSocketServer {
     /**
      * Wraps with type "flowLifecycle"
      */
-    void sendLifecycle(Deque<FlowDTO> flows) {
+    void sendLifecycle(Deque<DataflowDTO> flows) {
         if (debugger != null) {
             try {
                 Deque<String> written = new LinkedList<>();
-                for (FlowDTO o : flows) {
+                for (DataflowDTO o : flows) {
                     written.add(m.writeValueAsString(o));
                 }
                 debugger.send(wrap("flowLifecycle", written));

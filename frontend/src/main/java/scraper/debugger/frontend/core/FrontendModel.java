@@ -6,7 +6,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import scraper.debugger.dto.ControlFlowGraphDTO;
-import scraper.debugger.dto.FlowDTO;
+import scraper.debugger.dto.DataflowDTO;
 import scraper.debugger.dto.InstanceDTO;
 import scraper.debugger.frontend.api.FrontendWebSocket;
 import scraper.debugger.frontend.api.FrontendActions;
@@ -40,7 +40,7 @@ public class FrontendModel extends FrontendWebSocket {
 
 
     private Deque<QuasiStaticNode> CURRENT_SELECTED_NODES = null;
-    private FlowDTO CURRENT_SELECTED_FLOW = null;
+    private DataflowDTO CURRENT_SELECTED_FLOW = null;
 
 
     public FrontendModel(FrontendController CONTROL, String bindingIp, int port) {
@@ -101,7 +101,7 @@ public class FrontendModel extends FrontendWebSocket {
     }
 
     @Override
-    protected void takeIdentifiedFlow(FlowDTO f) {
+    protected void takeIdentifiedFlow(DataflowDTO f) {
         QuasiStaticNode node;
         if (TREE.isEmpty()) {
             node = SPECIFICATION.getRoot();
@@ -112,7 +112,7 @@ public class FrontendModel extends FrontendWebSocket {
         } else {
             String parent = f.getParentIdent();
             QuasiStaticNode parentNode = TREE.get(parent);
-            node = EDGES.get(parentNode).get(f.getIntoAddress());
+            node = EDGES.get(parentNode).get(f.getNodeAddress());
             if (!node.isOnScreen()) {
                 Line line = TREE_PANE.put(parentNode.circle, node.circle);
                 parentNode.addOutgoingLine(node, line);
@@ -125,13 +125,13 @@ public class FrontendModel extends FrontendWebSocket {
     }
 
     @Override
-    protected void takeBreakpointHit(FlowDTO f) {
+    protected void takeBreakpointHit(DataflowDTO f) {
         QuasiStaticNode node = TREE.get(f.getIdent());
         node.circle.setFill(Paint.valueOf("darksalmon"));
     }
 
     @Override
-    protected void takeFinishedFlow(FlowDTO f) {
+    protected void takeFinishedFlow(DataflowDTO f) {
     }
 
     @Override
@@ -144,10 +144,10 @@ public class FrontendModel extends FrontendWebSocket {
 
     void takeSelectedNodes(Deque<QuasiStaticNode> nodes) {
         CURRENT_SELECTED_NODES = nodes;
-        VALUES.viewValues(nodes);
+        VALUES.viewValues();
     }
 
-    void takeSelectedFlow(FlowDTO f) {
+    void takeSelectedFlow(DataflowDTO f) {
         CURRENT_SELECTED_FLOW = f;
     }
 
@@ -155,7 +155,7 @@ public class FrontendModel extends FrontendWebSocket {
         return Optional.ofNullable(CURRENT_SELECTED_NODES);
     }
 
-    Optional<FlowDTO> currentSelectedFlow() {
+    Optional<DataflowDTO> currentSelectedFlow() {
         return Optional.ofNullable(CURRENT_SELECTED_FLOW);
     }
 }

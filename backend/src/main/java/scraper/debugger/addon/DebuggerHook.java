@@ -1,5 +1,6 @@
 package scraper.debugger.addon;
 
+import scraper.annotations.ArgsCommand;
 import scraper.annotations.NotNull;
 import scraper.api.*;
 import scraper.debugger.core.DebuggerServer;
@@ -13,11 +14,12 @@ import scraper.utils.StringUtil;
 
 import java.util.*;
 
-/**
- * Provided to scraper framework.
- * Executed after default hooks like type checker hook.
- * Can handle only one scrape job.
- */
+
+@ArgsCommand(
+        value = "debug",
+        doc = "Starts a debugging websocket server and creates a debugging node hook.",
+        example = "scraper app.scrape debug"
+)
 public class DebuggerHook implements Hook {
 
     // Logger with actually intended name
@@ -30,10 +32,10 @@ public class DebuggerHook implements Hook {
 
     @Override
     public void execute(@NotNull DIContainer dependencies, @NotNull String[] args, @NotNull Map<ScrapeSpecification, ScrapeInstance> scraper) {
-        boolean debug = StringUtil.getArgument(args, "debug") != null;
-        boolean addDebugger = StringUtil.getArgument(args, "add-debugger") != null;
+        boolean debugArg = StringUtil.getArgument(args, "debug") != null;
+        boolean backendArg = StringUtil.getArgument(args, "debugger-backend") != null;
 
-        if (debug || addDebugger) {
+        if (debugArg || backendArg) {
             if (scraper.size() != 1) {
                 throw new RuntimeException("Debugger can handle only one job!");
             } else {
@@ -50,7 +52,7 @@ public class DebuggerHook implements Hook {
                     });
                 });
 
-                if (debug) {
+                if (debugArg) {
                     DebuggerServer SERVER = dependencies.get(DebuggerServer.class);
 
                     DebuggerNodeHook NODE_HOOK = new DebuggerNodeHook(

@@ -15,8 +15,6 @@ public class FrontendApp extends Application {
     private final String bindingIp;
     private final int port;
 
-    private FrontendModel MODEL;
-
     public FrontendApp(String bindingIp, int port) {
         this.bindingIp = bindingIp;
         this.port = port;
@@ -28,8 +26,7 @@ public class FrontendApp extends Application {
             FXMLLoader loader = new FXMLLoader(FrontendApp.class.getResource("/FrontendView.fxml"));
             Parent loaded = loader.load();
             FrontendController CONTROL = loader.getController();
-            MODEL = new FrontendModel(CONTROL, bindingIp, port);
-            CONTROL.setModel(MODEL);
+            CONTROL.setModel(new FrontendModel(CONTROL, bindingIp, port));
             CONTROL.initialize();
 
             stage.setScene(new Scene(loaded));

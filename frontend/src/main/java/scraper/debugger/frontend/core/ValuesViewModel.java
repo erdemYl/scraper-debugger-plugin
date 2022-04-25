@@ -12,7 +12,7 @@ import javafx.scene.control.*;
 
 import javafx.scene.paint.Paint;
 import javafx.util.Callback;
-import scraper.debugger.dto.FlowDTO;
+import scraper.debugger.dto.DataflowDTO;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -20,40 +20,40 @@ import java.util.concurrent.Executors;
 public class ValuesViewModel {
 
     // Flow value table
-    private final TableView<FlowDTO> VALUES;
+    private final TableView<DataflowDTO> VALUE_TABLE;
 
-    private final Service<Deque<QuasiStaticNode>> VALUE_VIEW;
-    private Deque<QuasiStaticNode> currentSelectedNodes = null;
+    // On demand, views flows in some node n
+    private final Service<Void> VIEW_SERVICE;
 
     // Flow map
     private final ListView<String> MAP;
     private final Label MAP_LABEL;
 
     // Registered columns, not modified once columns registered
-    private final Map<QuasiStaticNode, TableColumn<FlowDTO, String>> valueColumns = new HashMap<>();
+    private final Map<QuasiStaticNode, TableColumn<DataflowDTO, String>> valueColumns = new HashMap<>();
 
     // Static columns
-    private final TableColumn<FlowDTO, String> waitingColumn = new TableColumn<>();
-    private final TableColumn<FlowDTO, String> processedColumn = new TableColumn<>();
+    private final TableColumn<DataflowDTO, String> waitingColumn = new TableColumn<>();
+    private final TableColumn<DataflowDTO, String> processedColumn = new TableColumn<>();
 
     // Properties
     private final StringProperty waitingFlowNumber = new SimpleStringProperty("Waiting: 0");
     private final StringProperty processedFlowNumber = new SimpleStringProperty("Processed: 0");
-    private final ObservableList<FlowDTO> currentViewedFlows = FXCollections.observableArrayList();
+    private final ObservableList<DataflowDTO> currentViewedFlows = FXCollections.observableArrayList();
     private final ObservableList<String> currentViewedMap = FXCollections.observableArrayList();
 
 
-    ValuesViewModel(FrontendModel MODEL, TableView<FlowDTO> valueTable, ListView<String> flowMap, Label mapLabel) {
-        VALUES = valueTable;
+    ValuesViewModel(FrontendModel MODEL, TableView<DataflowDTO> valueTable, ListView<String> flowMap, Label mapLabel) {
+        VALUE_TABLE = valueTable;
         MAP = flowMap;
         MAP_LABEL = mapLabel;
-        VALUES.setItems(currentViewedFlows);
+        VALUE_TABLE.setItems(currentViewedFlows);
         MAP.setItems(currentViewedMap);
 
         String style = "-fx-background-color: burlywood; -fx-border-color:  #896436; -fx-border-width: 2";
 
         // cell factory for static columns
-        Callback<TableColumn<FlowDTO, String>, TableCell<FlowDTO, String>> cells = column -> new TableCell<>() {
+        Callback<TableColumn<DataflowDTO, String>, TableCell<DataflowDTO, String>> cells = column -> new TableCell<>() {
             @Override
             protected void updateItem(String content, boolean empty) {
                 super.updateItem(content, empty);
@@ -77,8 +77,8 @@ public class ValuesViewModel {
         processedColumn.setPrefWidth(154);
         processedColumn.textProperty().bind(processedFlowNumber);
 
-        VALUE_VIEW = createViewService();
-        VALUE_VIEW.setExecutor(Executors.newSingleThreadExecutor());
+        VIEW_SERVICE = createViewService(MODEL);
+        VIEW_SERVICE.setExecutor(Executors.newSingleThreadExecutor());
 
         // flow map elements
         MAP.setCellFactory(new Callback<>() {
@@ -101,12 +101,12 @@ public class ValuesViewModel {
         });
 
         // rows
-        VALUES.setRowFactory(new Callback<>() {
+        VALUE_TABLE.setRowFactory(new Callback<>() {
             @Override
-            public TableRow<FlowDTO> call(TableView<FlowDTO> view) {
+            public TableRow<DataflowDTO> call(TableView<DataflowDTO> view) {
                 return new TableRow<>() {
                     @Override
-                    protected void updateItem(FlowDTO f, boolean empty) {
+                    protected void updateItem(DataflowDTO f, boolean empty) {
                         super.updateItem(f, empty);
                         if (empty) {
                             setStyle(null);
@@ -131,7 +131,7 @@ public class ValuesViewModel {
     void createValueColumns(Set<QuasiStaticNode> NODES) {
         NODES.forEach(node -> {
             node.dataStreamKey().ifPresent(key -> {
-                TableColumn<FlowDTO, String> valueColumn = new TableColumn<>(key);
+                TableColumn<DataflowDTO, String> valueColumn = new TableColumn<>(key);
 
                 // Cell value of this column is the value of data stream key
                 valueColumn.setCellValueFactory(features ->
@@ -142,9 +142,8 @@ public class ValuesViewModel {
         });
     }
 
-    void viewValues(Deque<QuasiStaticNode> selectedNodes) {
-        currentSelectedNodes = Objects.requireNonNull(selectedNodes);
-        VALUE_VIEW.start();
+    void viewValues() {
+        VIEW_SERVICE.start();
     }
 
     void visibleMap(boolean v) {
@@ -152,29 +151,30 @@ public class ValuesViewModel {
         MAP_LABEL.setVisible(v);
     }
 
-    private Service<Deque<QuasiStaticNode>> createViewService() {
+    private Service<Void> createViewService(FrontendModel MODEL) {
         return new Service<>() {
             @Override
-            protected Task<Deque<QuasiStaticNode>> createTask() {
+            protected Task<Void> createTask() {
                 return new Task<>() {
                     @Override
-                    protected Deque<QuasiStaticNode> call() {
-                        if (!currentSelectedNodes.isEmpty()) {
-                            // at least one node must be marked and on screen
-                            QuasiStaticNode node = currentSelectedNodes.getLast();
+                    protected Void call() {
+                        MODEL.currentSelectedNodes().ifPresent(currentNodes -> {
+
+                            // at least one node is selected
+                            QuasiStaticNode node = currentNodes.getLast();
 
                             if (node.isOnScreen()) {
 
                                 // new value factories for static columns
                                 waitingColumn.setCellValueFactory(features -> {
-                                    FlowDTO f = features.getValue();
+                                    DataflowDTO f = features.getValue();
                                     if (!node.departed(f)) {
                                         return new SimpleStringProperty(f.getIdent());
                                     }
                                     return new SimpleStringProperty("");
                                 });
                                 processedColumn.setCellValueFactory(features -> {
-                                    FlowDTO f = features.getValue();
+                                    DataflowDTO f = features.getValue();
                                     if (node.departed(f)) {
                                         return new SimpleStringProperty(f.getIdent());
                                     }
@@ -182,34 +182,31 @@ public class ValuesViewModel {
                                 });
 
                                 // find usable columns for this marking
-                                List<TableColumn<FlowDTO, String>> usableColumns = new LinkedList<>(currentSelectedNodes){{pollLast();}}
+                                List<TableColumn<DataflowDTO, String>> usableColumns = new LinkedList<>(currentNodes){{pollLast();}}
                                         .stream()
                                         .map(valueColumns::get)
                                         .filter(Objects::nonNull)
                                         .toList();
 
                                 // Renew items and add columns
-                                ObservableList<TableColumn<FlowDTO, ?>> currentViewedColumns = VALUES.getColumns();
+                                ObservableList<TableColumn<DataflowDTO, ?>> currentViewedColumns = VALUE_TABLE.getColumns();
+
+                                Set<DataflowDTO> arrivals = node.arrivals();
+                                Set<DataflowDTO> departures = node.departures();
 
                                 Platform.runLater(() -> {
                                     currentViewedFlows.clear();
                                     currentViewedColumns.clear();
                                     currentViewedColumns.addAll(List.of(waitingColumn, processedColumn));
                                     currentViewedColumns.addAll(usableColumns);
-                                });
-                                Set<FlowDTO> arrivals = node.arrivals();
-                                Set<FlowDTO> departures = node.departures();
-
-                                Platform.runLater(() -> {
                                     currentViewedFlows.addAll(arrivals);
                                     currentViewedFlows.addAll(departures);
                                     waitingFlowNumber.setValue("Waiting: " + arrivals.size());
                                     processedFlowNumber.setValue("Processed: " + departures.size());
                                 });
-
                             }
-                        }
-                        return currentSelectedNodes;
+                        });
+                        return null;
                     }
                 };
             }

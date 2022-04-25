@@ -13,6 +13,11 @@ import java.util.Map.Entry;
 
 public class TreePane {
 
+    // For synchronizing application thread and websocket selector thread
+    // Simple but important variable.
+    // Java Concurrency in Practice, 2010, Chapter 9
+    private volatile boolean wait = false;
+
     // Pane, upon which our tree will build itself
     private final AnchorPane TREE_PANE;
 
@@ -53,6 +58,12 @@ public class TreePane {
         VBox pLevel = circleToLevel.get(parent);
         Objects.requireNonNull(pLevel);
         assert !exists(childToPut);
+
+        // WAITS UNTIL: last put update completely done
+        while (wait) {
+            Thread.onSpinWait();
+        }
+        wait = true;
 
         // create or find level
         VBox level;
@@ -107,19 +118,20 @@ public class TreePane {
         Line line = new Line();
         double startY = getNodeCenter(pLevel, parent) + 9;
         double endY = getNodeCenter(level, childToPut) + 9;
+        line.setLayoutX(0);
+        line.setLayoutY(0);
+        line.setStartX(pLevel.getLayoutX() + 9);
+        line.setStartY(startY);
+        line.setEndX(level.getLayoutX() + 9);
+        line.setEndY(endY);
 
         Platform.runLater(() -> {
             lines.put(line, Map.entry(parent, childToPut));
             lines2.put(line, Map.entry(pLevel, level));
-            line.setLayoutX(0);
-            line.setLayoutY(0);
-            line.setStartX(pLevel.getLayoutX() + 9);
-            line.setStartY(startY);
-            line.setEndX(level.getLayoutX() + 9);
-            line.setEndY(endY);
             TREE_PANE.getChildren().add(line);
             updateLines(pLevel, level);
             updateLines(level);
+            wait = false;
         });
 
         return line;

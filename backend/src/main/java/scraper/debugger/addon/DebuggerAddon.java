@@ -9,13 +9,13 @@ import scraper.utils.StringUtil;
 
 @ArgsCommand(
         value = "debug",
-        doc = "Starts a debugging websocket server and waits for a debugger to be present for processing the flow. If no port is specified with debug-port, then 8890 is used.",
+        doc = "Adds debugger core components to program dependencies.",
         example = "scraper app.scrape debug"
 )
 @ArgsCommand(
-        value = "add-debugger",
-        doc = "Only adds debugger components to dependencies. Server won't start and flows won't wait.",
-        example = "scraper app.scrape add-debugger"
+        value = "debugger-backend",
+        doc = "For customizing backend.",
+        example = "scraper app.scrape debugger-backend"
 )
 @ArgsCommand(
         value = "debug-ip",
@@ -38,10 +38,10 @@ public class DebuggerAddon implements Addon {
 
     @Override
     public void load(@NotNull DIContainer dependencies, @NotNull String[] args) {
-        boolean debug = StringUtil.getArgument(args, "debug") != null;
-        boolean addDebugger = StringUtil.getArgument(args, "add-debugger") != null;
+        boolean debugArg = StringUtil.getArgument(args, "debug") != null;
+        boolean backendArg = StringUtil.getArgument(args, "debugger-backend") != null;
 
-        if (debug || addDebugger) {
+        if (debugArg || backendArg) {
             l.log(warn, "Debugging activated");
             String debugPort = StringUtil.getArgument(args, "debug-port");
             String debugIp = StringUtil.getArgument(args, "debug-ip");

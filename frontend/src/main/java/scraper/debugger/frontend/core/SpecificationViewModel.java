@@ -3,7 +3,6 @@ package scraper.debugger.frontend.core;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-import javafx.scene.control.Cell;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
@@ -16,10 +15,8 @@ import scraper.debugger.dto.NodeDTO;
 import scraper.debugger.frontend.api.FrontendActions;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class SpecificationViewModel {
 
@@ -29,14 +26,11 @@ public class SpecificationViewModel {
     private static final Paint BLACK = Paint.valueOf("black");
     private static final Paint BROWN = Paint.valueOf("burlywood");
 
-    // Actions dependency
-    private final FrontendActions ACTIONS;
-
-    // Quasi-static flow tree view, modified dynamically
+    // Quasi-static flow tree view
     private final TreeView<QuasiStaticNode> QUASI_STATIC_TREE;
 
     // Selection service
-    private final Service<Deque<QuasiStaticNode>> NODE_SELECTION;
+    private final Service<Deque<QuasiStaticNode>> SELECTION_SERVICE;
 
     // Newly marked cells
     private final Map<QuasiStaticNode, TreeCell<QuasiStaticNode>> MARKED_CELLS = new HashMap<>();
@@ -45,9 +39,9 @@ public class SpecificationViewModel {
     private final Collection<Line> MARKED_LINES = new LinkedList<>();
 
     // Defined breakpoints
-    private final Set<QuasiStaticNode> BREAKPOINTS = new HashSet<>();
+    private final Set<QuasiStaticNode> breakpoints = new HashSet<>();
 
-    // Selecting nodes until this
+    // Selected node from user
     private QuasiStaticNode current = null;
 
 
@@ -55,11 +49,10 @@ public class SpecificationViewModel {
      * Creates cell factory and defines node selection service
      */
     SpecificationViewModel(FrontendActions ACTIONS, FrontendModel MODEL, TreeView<QuasiStaticNode> specificationTreeView) {
-        this.ACTIONS = ACTIONS;
         QUASI_STATIC_TREE = specificationTreeView;
-        NODE_SELECTION = createSelectionService(MODEL);
-        NODE_SELECTION.setExecutor(Executors.newSingleThreadExecutor());
-        createCellFactory();
+        SELECTION_SERVICE = createSelectionService(MODEL);
+        SELECTION_SERVICE.setExecutor(Executors.newSingleThreadExecutor());
+        createCellFactory(ACTIONS);
     }
 
 
@@ -70,10 +63,7 @@ public class SpecificationViewModel {
         String start = jobCFG.getStart();
 
         // root
-        QuasiStaticNode rootNode = QuasiStaticNode.createFrom(
-                nodeDTO.get(start),
-                endNodes.contains(start)
-        );
+        QuasiStaticNode rootNode = new QuasiStaticNode(nodeDTO.get(start), endNodes.contains(start));
         TreeItem<QuasiStaticNode> root = rootNode.treeItem;
 
         // all nodes
@@ -99,7 +89,7 @@ public class SpecificationViewModel {
      */
     void selectNodesUntil(QuasiStaticNode node) {
         current = Objects.requireNonNull(node);
-        NODE_SELECTION.start();
+        SELECTION_SERVICE.start();
     }
 
 
@@ -112,10 +102,7 @@ public class SpecificationViewModel {
     {
         parent.setExpanded(true);
         for (String out : outgoings) {
-            QuasiStaticNode node = QuasiStaticNode.createFrom(
-                    nodeDTO.get(out),
-                    endNodes.contains(out)
-            );
+            QuasiStaticNode node = new QuasiStaticNode(nodeDTO.get(out), endNodes.contains(out));
             TreeItem<QuasiStaticNode> item = node.treeItem;
             NODES.add(node);
             parent.getChildren().add(item);
@@ -145,7 +132,7 @@ public class SpecificationViewModel {
                         Deque<QuasiStaticNode> nodesUntilCurrent = new LinkedList<>(List.of(current));
                         QuasiStaticNode node = current;
                         Optional<QuasiStaticNode> parent = node.getParent();
-                        boolean cellWayExists = node.treeCell != null;
+                        boolean cellWayExists = true;
 
                         while(parent.isPresent()) {
                             QuasiStaticNode pNode = parent.get();
@@ -157,7 +144,7 @@ public class SpecificationViewModel {
                             nodesUntilCurrent.addFirst(pNode);
                             node = pNode;
                             parent = pNode.getParent();
-                            cellWayExists = node.treeCell != null;
+                            if (node.treeCell == null) cellWayExists = false;
                         }
 
                         // Marking cells on the new way
@@ -187,7 +174,7 @@ public class SpecificationViewModel {
         };
     }
 
-    private void createCellFactory() {
+    private void createCellFactory(FrontendActions ACTIONS) {
 
         QUASI_STATIC_TREE.setCellFactory(new Callback<>() {
 
@@ -212,9 +199,9 @@ public class SpecificationViewModel {
                             // Event handler for this cell
                             setOnMouseClicked(e -> {
                                 if (e.isControlDown()) {
-                                    if (!breakpoint(node) && !node.isOnScreen()) {
+                                    if (e.isShiftDown() && !breakpoint(node)) {
                                         ACTIONS.requestSetBreakpoint(node.toString());
-                                        BREAKPOINTS.add(node);
+                                        breakpoints.add(node);
                                         setStyle(BLUE);
                                     }
                                     // do selection until this cell
@@ -229,6 +216,6 @@ public class SpecificationViewModel {
     }
 
     private boolean breakpoint(QuasiStaticNode node) {
-        return BREAKPOINTS.contains(node);
+        return breakpoints.contains(node);
     }
 }

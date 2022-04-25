@@ -2,10 +2,9 @@ package scraper.debugger.frontend.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import scraper.debugger.dto.FlowDTO;
+import scraper.debugger.dto.DataflowDTO;
 
 import java.util.Deque;
-import java.util.LinkedList;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -42,47 +41,67 @@ public final class FrontendActions {
     // EXECUTION API
     //================
 
-    public synchronized void requestStartExecution() {
-        if (!executionStarted) {
-            executionStarted = true;
-            executionSender.execute(() -> socket.send(wrap("startExecution", "")));
-        }
+    public void requestStartExecution() {
+        executionSender.execute(() -> {
+            if (!executionStarted) {
+                executionStarted = true;
+                socket.send(wrap("startExecution", ""));
+            }
+        });
     }
 
-    public synchronized void requestContinueExecution() {
-        if (executionStarted) executionSender.execute(() -> socket.send(wrap("continueExecution", "")));
+    public void requestContinueExecution() {
+        executionSender.execute(() -> {
+            if (executionStarted) socket.send(wrap("continueExecution", ""));
+        });
     }
 
-    public synchronized void requestStopExecution() {
-        if (executionStarted) executionSender.execute(() -> socket.send(wrap("stopExecution", "")));
+    public void requestStopExecution() {
+        executionSender.execute(() -> {
+            if (executionStarted) socket.send(wrap("stopExecution", ""));
+        });
     }
 
-    public synchronized void requestSetBreakpoint(String address) {
-        executionSender.execute(() -> socket.send(wrap("setBreakpoint", address)));
+    public void requestSetBreakpoint(String address) {
+        executionSender.execute(() -> {
+            socket.send(wrap("setBreakpoint", address));
+        });
     }
 
-    public synchronized void requestResumeSelected(String flowIdent) {
-        if (executionStarted) executionSender.execute(() -> socket.send(wrap("resumeSelected", flowIdent)));
+    public void requestResumeSelected(String flowIdent) {
+        executionSender.execute(() -> {
+            if (executionStarted) socket.send(wrap("resumeSelected", flowIdent));
+        });
     }
 
-    public synchronized void requestStopSelected(String flowIdent) {
-        if (executionStarted) executionSender.execute(() -> socket.send(wrap("stopSelected", flowIdent)));
+    public void requestStopSelected(String flowIdent) {
+        executionSender.execute(() -> {
+            if (executionStarted) socket.send(wrap("stopSelected", flowIdent));
+        });
     }
 
-    public synchronized void requestResumeAllContinueExecution() {
-        if (executionStarted) executionSender.execute(() -> socket.send(wrap("resumeAllContinueExecution", "")));
+    public void requestResumeAllContinueExecution() {
+        executionSender.execute(() -> {
+            if (executionStarted) socket.send(wrap("resumeAllContinueExecution", ""));
+        });
     }
 
-    public synchronized void requestStepAll() {
-        if (executionStarted) executionSender.execute(() -> socket.send(wrap("stepAll", "Stop")));
+    public void requestStepAll() {
+        executionSender.execute(() -> {
+            if (executionStarted) socket.send(wrap("stepAll", "Stop"));
+        });
     }
 
-    public synchronized void requestStepAllContinueExecution() {
-        if (executionStarted) executionSender.execute(() -> socket.send(wrap("stepAllContinueExecution", "")));
+    public void requestStepAllContinueExecution() {
+        executionSender.execute(() -> {
+            if (executionStarted) socket.send(wrap("stepAllContinueExecution", ""));
+        });
     }
 
-    public synchronized void requestStepSelected(String flowIdent) {
-        if (executionStarted) executionSender.execute(() -> socket.send(wrap("stepSelected", flowIdent)));
+    public void requestStepSelected(String flowIdent) {
+        executionSender.execute(() -> {
+            if (executionStarted) socket.send(wrap("stepSelected", flowIdent));
+        });
     }
 
 
@@ -120,15 +139,16 @@ public final class FrontendActions {
     }
 
 
-    public synchronized Deque<FlowDTO> requestLifecycleQuery(LifecycleQuery query, String ident) throws ExecutionException, InterruptedException {
-        if (executionStarted) {
-            Future<Deque<FlowDTO>> response = querySender.submit(() -> {
+    public Deque<DataflowDTO> requestLifecycleQuery(LifecycleQuery query, String ident) throws ExecutionException, InterruptedException {
+        Future<Deque<DataflowDTO>> response = querySender.submit(() -> {
+            try {
                 socket.send(wrap(query.toRequestString(), ident));
                 return socket.getQueryQueue().remove();
-            });
-            return response.get();
-        }
-        throw new RuntimeException("Execution not started yet!");
+            } catch (Exception any) {
+                throw new RuntimeException("Cannot request lifecycle query.");
+            }
+        });
+        return response.get();
     }
 
 

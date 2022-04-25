@@ -16,7 +16,7 @@ import java.util.concurrent.SynchronousQueue;
 public abstract class FrontendWebSocket extends WebSocketClient {
 
     // Query response queue
-    private final BlockingQueue<Deque<FlowDTO>> queryQueue = new SynchronousQueue<>(true);
+    private final BlockingQueue<Deque<DataflowDTO>> queryQueue = new SynchronousQueue<>(true);
 
     // Query response bringing thread
     private final ExecutorService queryBringer = Executors.newSingleThreadExecutor();
@@ -25,6 +25,7 @@ public abstract class FrontendWebSocket extends WebSocketClient {
 
     public FrontendWebSocket(String bindingIp, int port) {
         super(URI.create("ws://" + bindingIp + ":" + port));
+        setReuseAddr(true);
     }
 
     @Override
@@ -45,17 +46,17 @@ public abstract class FrontendWebSocket extends WebSocketClient {
                 }
                 case "identifiedFlow" -> {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
-                    FlowDTO f = m.readValue(dto.get("flow"), FlowDTO.class);
+                    DataflowDTO f = m.readValue(dto.get("flow"), DataflowDTO.class);
                     takeIdentifiedFlow(f);
                 }
                 case "breakpointHit" -> {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
-                    FlowDTO f = m.readValue(dto.get("flow"), FlowDTO.class);
+                    DataflowDTO f = m.readValue(dto.get("flow"), DataflowDTO.class);
                     takeBreakpointHit(f);
                 }
                 case "finishedFlow" -> {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
-                    FlowDTO f = m.readValue(dto.get("flow"), FlowDTO.class);
+                    DataflowDTO f = m.readValue(dto.get("flow"), DataflowDTO.class);
                     takeFinishedFlow(f);
                 }
                 case "log" -> {
@@ -66,9 +67,9 @@ public abstract class FrontendWebSocket extends WebSocketClient {
                     queryBringer.execute(() -> {
                         try {
                             Deque<String> dto = (Deque<String>) data.get("data");
-                            Deque<FlowDTO> converted = new LinkedList<>();
+                            Deque<DataflowDTO> converted = new LinkedList<>();
                             for (String str : dto) {
-                                converted.add(m.readValue(str, FlowDTO.class));
+                                converted.add(m.readValue(str, DataflowDTO.class));
                             }
                             queryQueue.add(converted);
                         } catch (JsonProcessingException e) {
@@ -100,15 +101,15 @@ public abstract class FrontendWebSocket extends WebSocketClient {
 
     protected abstract void takeSpecification(InstanceDTO jobIns, ControlFlowGraphDTO jobCFG);
 
-    protected abstract void takeIdentifiedFlow(FlowDTO f);
+    protected abstract void takeIdentifiedFlow(DataflowDTO f);
 
-    protected abstract void takeBreakpointHit(FlowDTO f);
+    protected abstract void takeBreakpointHit(DataflowDTO f);
 
-    protected abstract void takeFinishedFlow(FlowDTO f);
+    protected abstract void takeFinishedFlow(DataflowDTO f);
 
     protected abstract void takeLogMessage(String log);
 
-    BlockingQueue<Deque<FlowDTO>> getQueryQueue() {
+    BlockingQueue<Deque<DataflowDTO>> getQueryQueue() {
         return queryQueue;
     }
 }

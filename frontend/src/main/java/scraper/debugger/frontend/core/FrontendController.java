@@ -1,14 +1,12 @@
 package scraper.debugger.frontend.core;
 
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Pane;
 
-import scraper.debugger.dto.FlowDTO;
+import scraper.debugger.dto.DataflowDTO;
 
 
 public class FrontendController {
@@ -157,7 +155,7 @@ public class FrontendController {
     // Flow Value Table
     //================
 
-    @FXML TableView<FlowDTO> valueTable;
+    @FXML TableView<DataflowDTO> valueTable;
 
 
     //================

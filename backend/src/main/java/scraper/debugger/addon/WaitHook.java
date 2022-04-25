@@ -1,5 +1,6 @@
 package scraper.debugger.addon;
 
+import scraper.annotations.ArgsCommand;
 import scraper.annotations.NotNull;
 import scraper.api.DIContainer;
 import scraper.api.Hook;
@@ -11,16 +12,18 @@ import scraper.utils.StringUtil;
 import java.util.Map;
 
 
-/**
- * Provided to scraper framework.
- * Executed as last hook if debugging activated.
- * Stops all flows and waits for a ready signal from frontend.
- */
+@ArgsCommand(
+        value = "debug",
+        doc = "Waits for a start signal from debugger to execute workflows.",
+        example = "scraper app.scrape debug"
+)
 public class WaitHook implements Hook {
 
     @Override
     public void execute(@NotNull DIContainer dependencies, @NotNull String[] args, @NotNull Map<ScrapeSpecification, ScrapeInstance> scraper)  {
-        if (StringUtil.getArgument(args, "debug") != null) {
+        boolean debugArg = StringUtil.getArgument(args, "debug") != null;
+        boolean backendArg = StringUtil.getArgument(args, "debugger-backend") != null;
+        if (debugArg || backendArg) {
             DebuggerState STATE = dependencies.get(DebuggerState.class);
             STATE.waitUntilStart();
         }

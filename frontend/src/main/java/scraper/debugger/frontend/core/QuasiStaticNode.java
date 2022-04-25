@@ -6,7 +6,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.StrokeType;
-import scraper.debugger.dto.FlowDTO;
+import scraper.debugger.dto.DataflowDTO;
 import scraper.debugger.dto.NodeDTO;
 
 import java.util.HashMap;
@@ -19,11 +19,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class QuasiStaticNode {
 
     // Arriving flows to this node
-    private final Map<String, FlowDTO> arrivals = new HashMap<>();
+    private final Map<String, DataflowDTO> arrivals = new HashMap<>();
 
 
     // Departing flows from this node
-    private final Map<String, FlowDTO> departures = new HashMap<>();
+    private final Map<String, DataflowDTO> departures = new HashMap<>();
 
 
     // Circle for tree pane
@@ -38,7 +38,7 @@ public final class QuasiStaticNode {
     volatile TreeCell<QuasiStaticNode> treeCell = null;
 
 
-    // Whether this node now on screen is
+    // Whether this node is currently displayed
     private final AtomicBoolean onScreen = new AtomicBoolean(false);
 
 
@@ -54,7 +54,7 @@ public final class QuasiStaticNode {
     private final String nodeType;
 
 
-    private QuasiStaticNode(NodeDTO n, boolean endNode) {
+    QuasiStaticNode(NodeDTO n, boolean endNode) {
         circle = new Circle(9);
         circle.setFill(Paint.valueOf("burlywood"));
         if (endNode) {
@@ -74,12 +74,7 @@ public final class QuasiStaticNode {
         }
     }
 
-    /* Static factory method to enhance readability */
-    static QuasiStaticNode createFrom(NodeDTO n, boolean isEndNode) {
-        return new QuasiStaticNode(n, isEndNode);
-    }
-
-    synchronized void addArrival(FlowDTO f) {
+    synchronized void addArrival(DataflowDTO f) {
         arrivals.put(f.getIdent(), f);
     }
 
@@ -90,28 +85,29 @@ public final class QuasiStaticNode {
         });
     }
 
+    synchronized Set<DataflowDTO> arrivals() {
+        return Set.copyOf(arrivals.values());
+    }
+
+    synchronized Set<DataflowDTO> departures() {
+        return Set.copyOf(departures.values());
+    }
+
+    synchronized boolean departed(DataflowDTO f) {
+        return departures.containsKey(f.getIdent());
+    }
+
     void addOutgoingLine(QuasiStaticNode other, Line line) {
         synchronized (outgoingLines) {
             outgoingLines.put(other, line);
         }
+
     }
 
     void setOnScreen() {
         synchronized (onScreen) {
             onScreen.set(true);
         }
-    }
-
-    synchronized Set<FlowDTO> arrivals() {
-        return Set.copyOf(arrivals.values());
-    }
-
-    synchronized Set<FlowDTO> departures() {
-        return Set.copyOf(departures.values());
-    }
-
-    boolean departed(FlowDTO f) {
-        return departures().contains(f);
     }
 
     boolean isOnScreen() {

@@ -1,12 +1,13 @@
 package scraper.debugger.core;
 
 import scraper.api.*;
-import scraper.debugger.dto.FlowDTO;
+import scraper.debugger.dto.DataflowDTO;
 import scraper.debugger.tree.PrefixTree;
 import scraper.debugger.tree.Trie;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -18,11 +19,11 @@ import static scraper.debugger.addon.DebuggerHook.getNodeType;
 public class FlowIdentifier {
 
     // Every identified flow
-    private final Map<UUID, IdentifiedFlow> identifiedFlows = new ConcurrentHashMap<>();
+    private final Map<UUID, Dataflow> identifiedFlows = new ConcurrentHashMap<>();
 
 
     // Quasi-static flow tree
-    private final PrefixTree<IdentifiedFlow> quasiStaticTree = new Trie<>();
+    private final PrefixTree<Dataflow> quasiStaticTree = new Trie<>();
 
 
     // Branch lock provider
@@ -31,50 +32,50 @@ public class FlowIdentifier {
 
     // Debugger components
     private final DebuggerServer SERVER;
-    private final DebuggerState STATE;
     private final FlowPermissions FP;
 
 
-    public FlowIdentifier(DebuggerServer SERVER, DebuggerState STATE, FlowPermissions FP) {
+    public FlowIdentifier(DebuggerServer SERVER, FlowPermissions FP) {
         this.SERVER = SERVER;
-        this.STATE = STATE;
         this.FP = FP;
     }
 
 
-    private static class IdentifiedFlow {
+    private static class Dataflow {
 
         final UUID id;
 
-        /** Identification of this flow */
+        /** Identification of this data flow */
         final String ident;
 
         /**  Transfer object */
-        final FlowDTO toSent;
+        final DataflowDTO toSent;
 
-        /** Whether this flow is flowing to a node, which can emit new flows */
+        /** Whether this flow is flowing to a node, which emits new flows */
         final boolean toFlowEmitterNode;
 
         /** Whether this flow is flowing to a fork node */
         final boolean toForkNode;
 
-        int postfix = 0;
+        /** Next assignable postfix integer for identification */
+        final AtomicInteger postfix = new AtomicInteger(0);
 
-        IdentifiedFlow(String ident, String pIdent, NodeContainer<? extends Node> n, FlowMap o) {
+        Dataflow(String ident, String pIdent, NodeContainer<? extends Node> n, FlowMap o) {
             NodeAddress address = n.getAddress();
-            this.id = o.getId();
-            toSent = new FlowDTO(ident, pIdent, address, o);
+            id = o.getId();
+            toSent = new DataflowDTO(ident, pIdent, address, o);
             this.ident = ident;
             toFlowEmitterNode = getNodeType(address).isFlowEmitter();
             toForkNode = getNodeType(address).isFork();
         }
 
-        synchronized String next() {
-            String post = toFlowEmitterNode
-                    ? ident + postfix + "."
-                    : ident + postfix;
-            postfix++;
-            return post;
+        String next() {
+            // Non-blocking synchronization
+            // Java Concurrency in Practice, 2010, Chapter 15
+            int post = postfix.getAndIncrement();
+            return toFlowEmitterNode
+                    ? ident + post + "."
+                    : ident + post;
         }
     }
 
@@ -121,30 +122,33 @@ public class FlowIdentifier {
     // Identify
     //=============
 
+    /**
+     * Identifies a data flow to/from node n, with flow-map o.
+     */
     public void identify(NodeContainer<? extends Node> n, FlowMap o) {
 
         // each flow initially has permission
         FP.create(o.getId());
 
-        IdentifiedFlow f = identifyNew(n, o);
+        Dataflow f = identifyNew(n, o);
         SERVER.sendIdentifiedFlow(f.toSent);
     }
 
-    private IdentifiedFlow identifyNew(NodeContainer<? extends Node> n, FlowMap o) {
+    private Dataflow identifyNew(NodeContainer<? extends Node> n, FlowMap o) {
         UUID parent = o.getParentId().orElse(null);
         UUID id = o.getId();
 
         String ident;
-        IdentifiedFlow flow;
+        Dataflow flow;
 
         if (parent == null || !exists(parent)) {
             // initial flow
             ident = "i";
-            flow = new IdentifiedFlow("i", "", n, o);
+            flow = new Dataflow("i", "", n, o);
         } else {
-            IdentifiedFlow pFlow = identifiedFlows.get(parent);
+            Dataflow pFlow = identifiedFlows.get(parent);
             ident =  pFlow.next();
-            flow = new IdentifiedFlow(ident, pFlow.ident, n, o);
+            flow = new Dataflow(ident, pFlow.ident, n, o);
             if (pFlow.toForkNode) lockProvider.generateLock(ident);
         }
 
@@ -175,7 +179,7 @@ public class FlowIdentifier {
      */
     public Optional<String> getOptional(UUID id) {
         if (id == null) return Optional.empty();
-        IdentifiedFlow f = identifiedFlows.get(id);
+        Dataflow f = identifiedFlows.get(id);
         return f == null ? Optional.empty() : Optional.of(f.ident);
     }
 
@@ -184,7 +188,7 @@ public class FlowIdentifier {
      * Returns empty string if given uuid not identified.
      */
     public String getExact(UUID id) {
-        IdentifiedFlow f = identifiedFlows.get(id);
+        Dataflow f = identifiedFlows.get(id);
         return f == null ? "" : f.ident;
     }
 
@@ -193,17 +197,17 @@ public class FlowIdentifier {
     }
 
     public int treeLevelOf(UUID id) {
-        IdentifiedFlow f = identifiedFlows.get(id);
+        Dataflow f = identifiedFlows.get(id);
         return f == null ? 0 : treeLevelOf(f.ident);
     }
 
-    public FlowDTO getDTO(UUID id) {
-        IdentifiedFlow f = identifiedFlows.get(id);
+    public DataflowDTO getDTO(UUID id) {
+        Dataflow f = identifiedFlows.get(id);
         return f == null ? null : f.toSent;
     }
 
     UUID toUUID(String ident) {
-        IdentifiedFlow f = quasiStaticTree.get(ident);
+        Dataflow f = quasiStaticTree.get(ident);
         return f == null ? null : f.id;
     }
 
@@ -220,7 +224,7 @@ public class FlowIdentifier {
         NOT_TO_FLOW_EMITTER        // flow to nodes that do not introduce new flows
     }
 
-    Deque<FlowDTO> getLifecycle(LifecycleFilter filter, String ident) {
+    Deque<DataflowDTO> getLifecycle(LifecycleFilter filter, String ident) {
         switch (filter) {
             case NORMAL -> {
                 return quasiStaticTree.getValuesOn(ident)

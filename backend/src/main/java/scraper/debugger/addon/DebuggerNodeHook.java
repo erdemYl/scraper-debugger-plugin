@@ -7,10 +7,7 @@ import scraper.api.NodeHook;
 import scraper.debugger.core.DebuggerServer;
 import scraper.debugger.core.FlowFilter;
 import scraper.debugger.core.FlowIdentifier;
-import scraper.debugger.dto.FlowDTO;
 
-import java.util.Set;
-import java.util.UUID;
 import java.util.logging.*;
 
 public class DebuggerNodeHook implements NodeHook {
