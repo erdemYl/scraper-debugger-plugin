@@ -10,7 +10,7 @@
     <includeBaseDirectory>false</includeBaseDirectory>
     <dependencySets>
         <dependencySet>
-            <outputDirectory>debugger</outputDirectory>
+            <outputDirectory>backend</outputDirectory>
         </dependencySet>
     </dependencySets>
 </assembly>

@@ -1,8 +1,28 @@
 # Scraper-Debugger-Plugin
-A complete debugger plugin to scraper framework.
 
-# Build
-1) Build both backend and frontend with "mvn clean install".
-2) Add all jars in target\backend-compressed.zip\debugger to your opt scraperflow lib
-3) Add all jars in target\frontend-compressed.zip\debugger to your opt scraperflow lib
-4) You can now run the debugger.
+[![build](https://img.shields.io/badge/build-maven-lightblue.svg)](https://maven.apache.org/plugins/index.html)
+
+Desktop debugger tool for [ScraperFlow](https://github.com/scraperflow/scraperflow) programming framework. Provided as plugin via `jar` files. 
+
+# Overview
+![screenshot](doc/Overview.jpg)
+
+* `A:` Control-flow graph. `ctrl + left-click` to navigate. `ctrl + alt + left-click` to set breakpoint.
+* `B:` Buttons for all flows.
+* `C:` Dynamic flow graph. `left-click` to inspect flow-map. `ctrl + left-click` to inspect flow states.
+* `D` Shows flow states or the flow-map for one selected flow.
+* `E:` `step` and `continue` buttons for one selected flow.
+
+
+
+# Quickstart - Debugging
+By using the start script in `~/opt/scraperflow` you can start the debugger via `./scraperflow file.yml debug`
+
+# Quickstart - Java
+* Execute `mvn install`. 
+* This will generate `backend/target` and `frontend/target` folders that contain a `zip` file.
+* Extract jars from `zip` files to `~/opt/scraperflow/var` folder.
+
+# Debugger Limits
+* Program `cfg` should form a tree.
+* Nodes should be configured to provide enough threads.
