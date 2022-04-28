@@ -88,7 +88,7 @@ public final class FrontendActions {
 
     public void requestStepAll() {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("stepAll", "Stop"));
+            if (executionStarted) socket.send(wrap("stepAll", ""));
         });
     }
 
@@ -118,19 +118,19 @@ public final class FrontendActions {
 
         private String toRequestString() {
             switch (this) {
-                case WHOLE -> {
+                case WHOLE: {
                     return "queryWholeLifecycle";
                 }
-                case TO_EMITTER_NODES -> {
+                case TO_EMITTER_NODES: {
                     return "queryToEmitterNodes";
                 }
-                case TO_EMITTER_NOT_FORK_NODES -> {
+                case TO_EMITTER_NOT_FORK_NODES: {
                     return "queryToEmitterNotForkNodes";
                 }
-                case TO_FORK_NODES -> {
+                case TO_FORK_NODES: {
                     return "queryToForkNodes";
                 }
-                case NOT_TO_EMITTER_NODES -> {
+                case NOT_TO_EMITTER_NODES: {
                     return "queryNotToEmitterNodes";
                 }
             }

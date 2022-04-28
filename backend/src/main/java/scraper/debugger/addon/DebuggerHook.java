@@ -84,14 +84,7 @@ public class DebuggerHook implements Hook {
         FORK, INT_RANGE, MAP, ON_WAY;
 
         public boolean isFlowEmitter() {
-            switch (this) {
-                case FORK, INT_RANGE, MAP -> {
-                    return true;
-                }
-                default -> {
-                    return false;
-                }
-            }
+            return this != NodeType.ON_WAY;
         }
 
         public boolean isFork() {
@@ -104,16 +97,16 @@ public class DebuggerHook implements Hook {
                     ? (String) n.getKeySpec("f").get()
                     : (String) t.get();
             switch (nodeType) {
-                case "Fork" -> {
+                case "Fork": {
                     return NodeType.FORK;
                 }
-                case "Map" -> {
+                case "Map": {
                     return NodeType.MAP;
                 }
-                case "IntRange" -> {
+                case "IntRange": {
                     return NodeType.INT_RANGE;
                 }
-                default -> {
+                default: {
                     return NodeType.ON_WAY;
                 }
             }

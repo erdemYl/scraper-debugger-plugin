@@ -226,34 +226,34 @@ public class FlowIdentifier {
 
     Deque<DataflowDTO> getLifecycle(LifecycleFilter filter, String ident) {
         switch (filter) {
-            case NORMAL -> {
+            case NORMAL: {
                 return quasiStaticTree.getValuesOn(ident)
                         .stream()
                         .map(f -> f.toSent)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
-            case TO_FLOW_EMITTER -> {
+            case TO_FLOW_EMITTER: {
                 return quasiStaticTree.getValuesOn(ident)
                         .stream()
                         .filter(f -> f.toFlowEmitterNode)
                         .map(f -> f.toSent)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
-            case TO_FLOW_EMITTER_NOT_FORK -> {
+            case TO_FLOW_EMITTER_NOT_FORK: {
                 return quasiStaticTree.getValuesOn(ident)
                         .stream()
                         .filter(f -> f.toFlowEmitterNode && !f.toForkNode)
                         .map(f -> f.toSent)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
-            case TO_FORK -> {
+            case TO_FORK: {
                 return quasiStaticTree.getValuesOn(ident)
                         .stream()
                         .filter(f -> f.toForkNode)
                         .map(f -> f.toSent)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
-            case NOT_TO_FLOW_EMITTER -> {
+            case NOT_TO_FLOW_EMITTER: {
                 return quasiStaticTree.getValuesOn(ident)
                         .stream()
                         .filter(f -> !f.toFlowEmitterNode)

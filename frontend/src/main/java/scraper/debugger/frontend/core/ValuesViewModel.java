@@ -16,6 +16,7 @@ import scraper.debugger.dto.DataflowDTO;
 
 import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class ValuesViewModel {
 
@@ -182,11 +183,13 @@ public class ValuesViewModel {
                                 });
 
                                 // find usable columns for this marking
-                                List<TableColumn<DataflowDTO, String>> usableColumns = new LinkedList<>(currentNodes){{pollLast();}}
-                                        .stream()
+                                //---last node is not taken
+                                int last = currentNodes.size() - 1;
+                                List<TableColumn<DataflowDTO, String>> usableColumns = currentNodes.stream()
+                                        .limit(last)
                                         .map(valueColumns::get)
                                         .filter(Objects::nonNull)
-                                        .toList();
+                                        .collect(Collectors.toUnmodifiableList());
 
                                 // Renew items and add columns
                                 ObservableList<TableColumn<DataflowDTO, ?>> currentViewedColumns = VALUE_TABLE.getColumns();

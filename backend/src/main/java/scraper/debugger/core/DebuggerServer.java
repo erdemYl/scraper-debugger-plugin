@@ -95,20 +95,14 @@ public final class DebuggerServer extends WebSocketServer {
             lock.lock();
             Map<String, String> request = m.readValue(msg, Map.class);
             String cmd = request.get("request");
-            if (cmd.startsWith("query")) {
-                Method m = DebuggerActions.class.getMethod(cmd, String.class);
-                m.invoke(DebuggerAddon.ACTIONS, request.get("content"));
+            String content = request.get("content");
+            Method m;
+            if (content.isEmpty()) {
+                m = DebuggerActions.class.getDeclaredMethod(cmd);
+                m.invoke(DebuggerAddon.ACTIONS);
             } else {
-                switch (cmd) {
-                    case "stepSelected", "resumeSelected", "stopSelected", "setBreakpoint" -> {
-                        Method m = DebuggerActions.class.getDeclaredMethod(cmd, String.class);
-                        m.invoke(DebuggerAddon.ACTIONS, request.get("content"));
-                    }
-                    default -> {
-                        Method m = DebuggerActions.class.getDeclaredMethod(cmd);
-                        m.invoke(DebuggerAddon.ACTIONS);
-                    }
-                }
+                m = DebuggerActions.class.getDeclaredMethod(cmd, String.class);
+                m.invoke(DebuggerAddon.ACTIONS, content);
             }
         } catch (Exception e) {
             l.log(Level.WARNING, "Invalid message detected from front-end: " + msg);

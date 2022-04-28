@@ -66,11 +66,17 @@ public final class QuasiStaticNode {
 
         nodeAddress = n.getAddress();
         circle.setAccessibleText(nodeAddress);
-        this.nodeType = n.getType();
+        nodeType = n.getType();
         switch (nodeType) {
-            case "IntRange" -> dataStreamKey = (String) n.getNodeConfiguration().get("output");
-            case "Map" -> dataStreamKey = (String) n.getNodeConfiguration().get("putElement");
-            default -> dataStreamKey = null;
+            case "IntRange": {
+                dataStreamKey = (String) n.getNodeConfiguration().get("output");
+                return;
+            }
+            case "Map": {
+                dataStreamKey = (String) n.getNodeConfiguration().get("putElement");
+                return;
+            }
+            default: dataStreamKey = null;
         }
     }
 

@@ -305,7 +305,7 @@ public class Trie<V> implements PrefixTree<V> {
                     return List.of();
                 }
             }
-            return values.stream().toList();
+            return Collections.unmodifiableList(values);
         }
     }
 
@@ -364,7 +364,7 @@ public class Trie<V> implements PrefixTree<V> {
                         });
                     }
                 });
-                return children.stream().toList();
+                return Collections.unmodifiableList(children);
             }
             return List.of();
         }
@@ -392,7 +392,7 @@ public class Trie<V> implements PrefixTree<V> {
                         children.addAll(findDirectEndNodesVALUE(node));
                     }
                 });
-                return children.stream().toList();
+                return Collections.unmodifiableList(children);
             }
             return List.of();
         }
@@ -422,7 +422,7 @@ public class Trie<V> implements PrefixTree<V> {
                 });
             }
         });
-        return ends.stream().toList();
+        return Collections.unmodifiableList(ends);
     }
 
     private List<V> findDirectEndNodesVALUE(Node<V> n) {
@@ -431,7 +431,7 @@ public class Trie<V> implements PrefixTree<V> {
             if (node.isEndNode()) ends.add(((EndNode<V>) node).value);
             else ends.addAll(findDirectEndNodesVALUE(node));
         });
-        return ends.stream().toList();
+        return Collections.unmodifiableList(ends);
     }
 
     @SuppressWarnings("Duplicates")

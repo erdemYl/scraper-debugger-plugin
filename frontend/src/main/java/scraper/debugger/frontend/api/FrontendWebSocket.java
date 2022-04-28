@@ -38,32 +38,37 @@ public abstract class FrontendWebSocket extends WebSocketClient {
             Map<String, Object> data = m.readValue(msg, Map.class);
             String type = (String) data.get("type");
             switch (type) {
-                case "specification" -> {
+                case "specification": {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
                     InstanceDTO ins = m.readValue(dto.get("instance"), InstanceDTO.class);
                     ControlFlowGraphDTO cfg = m.readValue(dto.get("cfg"), ControlFlowGraphDTO.class);
                     takeSpecification(ins, cfg);
+                    return;
                 }
-                case "identifiedFlow" -> {
+                case "identifiedFlow": {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
                     DataflowDTO f = m.readValue(dto.get("flow"), DataflowDTO.class);
                     takeIdentifiedFlow(f);
+                    return;
                 }
-                case "breakpointHit" -> {
+                case "breakpointHit": {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
                     DataflowDTO f = m.readValue(dto.get("flow"), DataflowDTO.class);
                     takeBreakpointHit(f);
+                    return;
                 }
-                case "finishedFlow" -> {
+                case "finishedFlow": {
                     Map<String, String> dto = (Map<String, String>) data.get("data");
                     DataflowDTO f = m.readValue(dto.get("flow"), DataflowDTO.class);
                     takeFinishedFlow(f);
+                    return;
                 }
-                case "log" -> {
+                case "log": {
                     String log = (String) data.get("data");
                     takeLogMessage(log);
+                    return;
                 }
-                case "flowLifecycle" -> {
+                case "flowLifecycle": {
                     queryBringer.execute(() -> {
                         try {
                             Deque<String> dto = (Deque<String>) data.get("data");
