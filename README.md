@@ -7,8 +7,8 @@ Desktop debugger tool for [ScraperFlow](https://github.com/scraperflow/scraperfl
 # Overview
 ![screenshot](doc/Overview.jpg)
 
-* `A:` Control-flow graph. `ctrl + left-click` to navigate. `ctrl + alt + left-click` to set breakpoint.
-* `B:` Buttons for all flows.
+* `A:` Control-flow graph. `ctrl + left-click` to navigate. `ctrl + shift + left-click` to set breakpoint.
+* `B:` `execution`, `step` and `continue` buttons for all flows.
 * `C:` Dynamic flow graph. `left-click` to inspect flow-map. `ctrl + left-click` to inspect flow states.
 * `D` Shows flow states or the flow-map for one selected flow.
 * `E:` `step` and `continue` buttons for one selected flow.
