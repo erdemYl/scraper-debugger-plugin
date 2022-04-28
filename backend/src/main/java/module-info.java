@@ -14,6 +14,7 @@ open module scraper.debugger {
     // json
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
+    requires com.fasterxml.jackson.annotation;
 
     // websocket
     requires Java.WebSocket;

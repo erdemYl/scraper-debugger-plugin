@@ -25,4 +25,5 @@ By using the start script in `~/opt/scraperflow` you can start the debugger via 
 
 # Debugger Limits
 * Program `cfg` should form a tree.
+* Tree should have `height < 20` and  `width < 16`.
 * Nodes should be configured to provide enough threads.
