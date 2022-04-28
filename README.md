@@ -10,7 +10,7 @@ Desktop debugger tool for [ScraperFlow](https://github.com/scraperflow/scraperfl
 * `A:` Control-flow graph. `ctrl + left-click` to navigate. `ctrl + shift + left-click` to set breakpoint.
 * `B:` `execution`, `step` and `continue` buttons for all flows.
 * `C:` Dynamic flow graph. `left-click` to inspect flow-map. `ctrl + left-click` to inspect flow states.
-* `D` Shows flow states or the flow-map for one selected flow.
+* `D:` Shows flow states or the flow-map for one selected flow.
 * `E:` `step` and `continue` buttons for one selected flow.
 
 
@@ -26,4 +26,5 @@ By using the start script in `~/opt/scraperflow` you can start the debugger via 
 # Debugger Limits
 * Program `cfg` should form a tree.
 * Tree should have `height < 20` and  `width < 16`.
+* No imported instances.
 * Nodes should be configured to provide enough threads.
