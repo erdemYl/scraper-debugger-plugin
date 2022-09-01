@@ -90,7 +90,7 @@ public class SpecificationViewModel {
      */
     void selectNodesUntil(QuasiStaticNode node) {
         current = Objects.requireNonNull(node);
-        SELECTION_SERVICE.start();
+        SELECTION_SERVICE.restart();
     }
 
 

@@ -6,12 +6,10 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.StrokeType;
+
 import scraper.debugger.dto.NodeDTO;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -21,10 +19,8 @@ public final class QuasiStaticNode {
     // Arriving flows to this node
     private final Set<String> arrivals = ConcurrentHashMap.newKeySet();
 
-
     // Departing flows from this node
     private final Set<String> departures = ConcurrentHashMap.newKeySet();
-
 
     // Circle for tree pane
     final Circle circle;
@@ -65,7 +61,6 @@ public final class QuasiStaticNode {
         treeItem = new TreeItem<>(this);
 
         nodeAddress = n.getAddress();
-        circle.setAccessibleText(nodeAddress);
         nodeType = n.getType();
         switch (nodeType) {
             case "IntRange": {
@@ -81,13 +76,14 @@ public final class QuasiStaticNode {
         }
     }
 
-    void addArrival(String ident) {
-        arrivals.add(ident);
+    void addArrival(CharSequence ident) {
+        arrivals.add(ident.toString().intern());
     }
 
-    void addDeparture(String ident) {
-        arrivals.remove(ident);
-        departures.add(ident);
+    void addDeparture(CharSequence ident) {
+        String istr = ident.toString().intern();
+        arrivals.remove(istr);
+        departures.add(istr);
     }
 
     Set<String> arrivals() {
@@ -98,8 +94,8 @@ public final class QuasiStaticNode {
         return departures;
     }
 
-    boolean departed(String ident) {
-        return departures.contains(ident);
+    boolean departed(CharSequence ident) {
+        return departures.contains(ident.toString().intern());
     }
 
     void addOutgoingLine(QuasiStaticNode other, Line line) {

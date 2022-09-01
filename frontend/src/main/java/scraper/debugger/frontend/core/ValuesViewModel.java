@@ -144,7 +144,7 @@ public class ValuesViewModel {
     }
 
     void viewValues() {
-        VIEW_SERVICE.start();
+        VIEW_SERVICE.restart();
     }
 
     void visibleMap(boolean v) {
@@ -169,17 +169,17 @@ public class ValuesViewModel {
                                 // new value factories for static columns
                                 waitingColumn.setCellValueFactory(features -> {
                                     FlowMapDTO f = features.getValue();
-                                    String ident = f.getIdent();
+                                    CharSequence ident = f.getIdent();
                                     if (!node.departed(ident)) {
-                                        return new SimpleStringProperty(ident);
+                                        return new SimpleStringProperty(ident.toString().intern());
                                     }
                                     return new SimpleStringProperty("");
                                 });
                                 processedColumn.setCellValueFactory(features -> {
                                     FlowMapDTO f = features.getValue();
-                                    String ident = f.getIdent();
+                                    CharSequence ident = f.getIdent();
                                     if (node.departed(ident)) {
-                                        return new SimpleStringProperty(ident);
+                                        return new SimpleStringProperty(ident.toString().intern());
                                     }
                                     return new SimpleStringProperty("");
                                 });
@@ -197,12 +197,12 @@ public class ValuesViewModel {
                                 ObservableList<TableColumn<FlowMapDTO, ?>> currentViewedColumns = VALUE_TABLE.getColumns();
 
                                 Set<FlowMapDTO> arrivals = node.arrivals()
-                                        .stream()
+                                        .parallelStream()
                                         .map(MODEL.ACTIONS::requestDataflowQuery)
                                         .collect(Collectors.toSet());
 
                                 Set<FlowMapDTO> departures = node.departures()
-                                        .stream()
+                                        .parallelStream()
                                         .map(MODEL.ACTIONS::requestDataflowQuery)
                                         .collect(Collectors.toSet());
 
@@ -216,6 +216,7 @@ public class ValuesViewModel {
                                     waitingFlowNumber.setValue("Waiting: " + arrivals.size());
                                     processedFlowNumber.setValue("Processed: " + departures.size());
                                 });
+                                System.gc();
                             }
                         });
                         return null;

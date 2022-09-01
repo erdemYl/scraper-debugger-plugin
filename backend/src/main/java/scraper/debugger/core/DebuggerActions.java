@@ -56,8 +56,8 @@ public final class DebuggerActions {
         STATE.setStart();
     }
 
-    void setBreakpoint(String address) {
-        STATE.addBreakpoint(address);
+    void setBreakpoint(CharSequence address) {
+        STATE.addBreakpoint(address.toString());
     }
 
     void continueExecution() {
@@ -76,7 +76,7 @@ public final class DebuggerActions {
         });
     }
 
-    void stepSelected(String ident) {
+    void stepSelected(CharSequence ident) {
         UUID id = FI.toUUID(ident);
         leftMessages.add(id);
         FP.create(id);
@@ -86,11 +86,11 @@ public final class DebuggerActions {
         FI.forEachIdentified(FP::create);
     }
 
-    void resumeSelected(String ident) {
+    void resumeSelected(CharSequence ident) {
         FP.create(FI.toUUID(ident));
     }
 
-    void stopSelected(String ident) {
+    void stopSelected(CharSequence ident) {
         FP.remove(FI.toUUID(ident));
     }
 
@@ -109,27 +109,27 @@ public final class DebuggerActions {
     // QUERY API
     //============
 
-    void queryOneFlow(String ident) {
+    void queryOneFlow(CharSequence ident) {
         SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.ONE, ident));
     }
 
-    void queryWholeLifecycle(String ident) {
+    void queryWholeLifecycle(CharSequence ident) {
         SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.NORMAL, ident));
     }
 
-    void queryToEmitterNodes(String ident) {
+    void queryToEmitterNodes(CharSequence ident) {
         SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.TO_FLOW_EMITTER, ident));
     }
 
-    void queryToEmitterNotForkNodes(String ident) {
+    void queryToEmitterNotForkNodes(CharSequence ident) {
         SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.TO_FLOW_EMITTER_NOT_FORK, ident));
     }
 
-    void queryToForkNodes(String ident) {
+    void queryToForkNodes(CharSequence ident) {
         SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.TO_FORK, ident));
     }
 
-    void queryNotToEmitterNodes(String ident) {
+    void queryNotToEmitterNodes(CharSequence ident) {
         SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.NOT_TO_FLOW_EMITTER, ident));
     }
 

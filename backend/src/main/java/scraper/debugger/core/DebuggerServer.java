@@ -100,7 +100,7 @@ public final class DebuggerServer extends WebSocketServer {
                 m = DebuggerActions.class.getDeclaredMethod(cmd);
                 m.invoke(DebuggerHookAddon.ACTIONS);
             } else {
-                m = DebuggerActions.class.getDeclaredMethod(cmd, String.class);
+                m = DebuggerActions.class.getDeclaredMethod(cmd, CharSequence.class);
                 m.invoke(DebuggerHookAddon.ACTIONS, content);
             }
         } catch (Exception e) {

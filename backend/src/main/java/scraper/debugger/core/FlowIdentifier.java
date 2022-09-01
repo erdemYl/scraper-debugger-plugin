@@ -1,13 +1,16 @@
 package scraper.debugger.core;
 
+import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharSequenceNodeFactory;
+import com.googlecode.concurrenttrees.radixinverted.ConcurrentInvertedRadixTree;
+import com.googlecode.concurrenttrees.radixinverted.InvertedRadixTree;
+
 import scraper.api.*;
 import scraper.debugger.dto.FlowDTO;
 import scraper.debugger.dto.FlowMapDTO;
-import scraper.debugger.tree.PrefixTree;
-import scraper.debugger.tree.Trie;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -18,12 +21,10 @@ import static scraper.debugger.addon.DebuggerHookAddon.getNodeType;
 public class FlowIdentifier {
 
     // Every identified flow
-    private final Map<UUID, Dataflow> identifiedFlows = new ConcurrentHashMap<>();
-
+    private final ConcurrentMap<UUID, Dataflow> identifiedFlows = new ConcurrentHashMap<>();
 
     // Quasi-static flow tree
-    private final PrefixTree<Dataflow> quasiStaticTree = new Trie<>();
-
+    private final InvertedRadixTree<Dataflow> quasiStaticTree = new ConcurrentInvertedRadixTree<>(new DefaultCharSequenceNodeFactory());
 
     // Debugger components
     private final DebuggerServer SERVER;
@@ -41,7 +42,7 @@ public class FlowIdentifier {
         final UUID id;
 
         /** Identification of this data flow */
-        final String ident;
+        final CharSequence ident;
 
         /**  Transfer info object, send directly */
         final FlowDTO infoSend;
@@ -58,7 +59,7 @@ public class FlowIdentifier {
         /** Next assignable postfix integer for identification */
         final AtomicInteger postfix = new AtomicInteger(0);
 
-        Dataflow(String ident, String pIdent, NodeContainer<? extends Node> n, FlowMap o) {
+        Dataflow(CharSequence ident, CharSequence pIdent, NodeContainer<? extends Node> n, FlowMap o) {
             NodeAddress address = n.getAddress();
             id = o.getId();
             infoSend = new FlowDTO(ident, pIdent, address);
@@ -68,13 +69,14 @@ public class FlowIdentifier {
             toForkNode = getNodeType(address).isFork();
         }
 
-        String next() {
+        CharSequence next() {
             // Non-blocking synchronization
             // Java Concurrency in Practice, 2010, Chapter 15
             int post = postfix.getAndIncrement();
-            return toFlowEmitterNode
-                    ? ident + post + "."
-                    : ident + post;
+            return (toFlowEmitterNode
+                    ? ident + String.valueOf(post) + "."
+                    : ident + String.valueOf(post))
+                    .intern();
         }
     }
 
@@ -101,7 +103,7 @@ public class FlowIdentifier {
         UUID parent = o.getParentId().orElse(null);
         UUID id = o.getId();
 
-        String ident;
+        CharSequence ident;
         Dataflow flow;
 
         if (parent == null || !exists(parent)) {
@@ -126,7 +128,7 @@ public class FlowIdentifier {
     /**
      * Gets identification wrapped in optional.
      */
-    public Optional<String> getOptional(UUID id) {
+    public Optional<CharSequence> getOptional(UUID id) {
         if (id == null) return Optional.empty();
         Dataflow f = identifiedFlows.get(id);
         return f == null ? Optional.empty() : Optional.of(f.ident);
@@ -136,7 +138,7 @@ public class FlowIdentifier {
      * Gets identification without wrapping in optional.
      * Returns empty string if given uuid not identified.
      */
-    public String getExact(UUID id) {
+    public CharSequence getExact(UUID id) {
         Dataflow f = identifiedFlows.get(id);
         return f == null ? "" : f.ident;
     }
@@ -145,18 +147,13 @@ public class FlowIdentifier {
         return identifiedFlows.containsKey(id);
     }
 
-    public int treeLevelOf(UUID id) {
-        Dataflow f = identifiedFlows.get(id);
-        return f == null ? 0 : treeLevelOf(f.ident);
-    }
-
     public FlowDTO getFlowDTO(UUID id) {
         Dataflow f = identifiedFlows.get(id);
         return f == null ? null : f.infoSend;
     }
 
-    UUID toUUID(String ident) {
-        Dataflow f = quasiStaticTree.get(ident);
+    UUID toUUID(CharSequence ident) {
+        Dataflow f = quasiStaticTree.getValueForExactKey(ident);
         return f == null ? null : f.id;
     }
 
@@ -174,54 +171,48 @@ public class FlowIdentifier {
         NOT_TO_FLOW_EMITTER        // flow to nodes that do not introduce new flows
     }
 
-    Deque<FlowMapDTO> getLifecycle(LifecycleFilter filter, String ident) {
+    Deque<FlowMapDTO> getLifecycle(LifecycleFilter filter, CharSequence ident) {
+        if (filter == LifecycleFilter.ONE) {
+            FlowMapDTO f = quasiStaticTree.getValueForExactKey(ident).contentSend;
+            return new LinkedList<>(List.of(f));
+        }
+
+        Iterable<Dataflow> lifecycle = quasiStaticTree.getValuesForKeysContainedIn(ident);
+        Deque<Dataflow> flows = new LinkedList<>();
+        lifecycle.forEach(flows::add);
+
         switch (filter) {
-            case ONE: {
-                FlowMapDTO f = quasiStaticTree.get(ident).contentSend;
-                return new LinkedList<>(List.of(f));
-            }
             case NORMAL: {
-                return quasiStaticTree.getValuesOn(ident)
-                        .stream()
+                return flows.stream()
                         .map(f -> f.contentSend)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
             case TO_FLOW_EMITTER: {
-                return quasiStaticTree.getValuesOn(ident)
-                        .stream()
+                return flows.stream()
                         .filter(f -> f.toFlowEmitterNode)
                         .map(f -> f.contentSend)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
             case TO_FLOW_EMITTER_NOT_FORK: {
-                return quasiStaticTree.getValuesOn(ident)
-                        .stream()
+                return flows.stream()
                         .filter(f -> f.toFlowEmitterNode && !f.toForkNode)
                         .map(f -> f.contentSend)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
             case TO_FORK: {
-                return quasiStaticTree.getValuesOn(ident)
-                        .stream()
+                return flows.stream()
                         .filter(f -> f.toForkNode)
                         .map(f -> f.contentSend)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
             case NOT_TO_FLOW_EMITTER: {
-                return quasiStaticTree.getValuesOn(ident)
-                        .stream()
+                return flows.stream()
                         .filter(f -> !f.toFlowEmitterNode)
                         .map(f -> f.contentSend)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
         }
         return new LinkedList<>();
-    }
-
-
-
-    private int treeLevelOf(String ident) {
-        return quasiStaticTree.getValuesOn(ident).size() - 1;
     }
 
     @Override

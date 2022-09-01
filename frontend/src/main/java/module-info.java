@@ -16,6 +16,9 @@ open module scraper.debugger.frontend {
     requires org.slf4j;
     requires java.logging;
 
+    // concurrent radix tree
+    requires concurrent.trees;
+
     // javafx
     requires javafx.graphics;
     requires javafx.controls;

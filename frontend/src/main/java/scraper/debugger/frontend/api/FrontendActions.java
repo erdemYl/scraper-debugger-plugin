@@ -68,15 +68,15 @@ public final class FrontendActions {
         });
     }
 
-    public void requestResumeSelected(String flowIdent) {
+    public void requestResumeSelected(CharSequence ident) {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("resumeSelected", flowIdent));
+            if (executionStarted) socket.send(wrap("resumeSelected", ident));
         });
     }
 
-    public void requestStopSelected(String flowIdent) {
+    public void requestStopSelected(CharSequence ident) {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("stopSelected", flowIdent));
+            if (executionStarted) socket.send(wrap("stopSelected", ident));
         });
     }
 
@@ -98,9 +98,9 @@ public final class FrontendActions {
         });
     }
 
-    public void requestStepSelected(String flowIdent) {
+    public void requestStepSelected(CharSequence ident) {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("stepSelected", flowIdent));
+            if (executionStarted) socket.send(wrap("stepSelected", ident));
         });
     }
 
@@ -143,7 +143,7 @@ public final class FrontendActions {
     }
 
 
-    public Deque<FlowMapDTO> requestLifecycleQuery(LifecycleQuery query, String ident) {
+    public Deque<FlowMapDTO> requestLifecycleQuery(LifecycleQuery query, CharSequence ident) {
         Future<Deque<FlowMapDTO>> response = querySender.submit(() -> {
             try {
                 socket.send(wrap(query.toRequestString(), ident));
@@ -160,7 +160,7 @@ public final class FrontendActions {
         }
     }
 
-    public FlowMapDTO requestDataflowQuery(String ident) {
+    public FlowMapDTO requestDataflowQuery(CharSequence ident) {
         return requestLifecycleQuery(LifecycleQuery.ONE, ident).pop();
     }
 

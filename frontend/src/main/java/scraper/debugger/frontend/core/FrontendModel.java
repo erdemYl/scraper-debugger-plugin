@@ -1,5 +1,8 @@
 package scraper.debugger.frontend.core;
 
+import com.googlecode.concurrenttrees.radix.ConcurrentRadixTree;
+import com.googlecode.concurrenttrees.radix.RadixTree;
+import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharSequenceNodeFactory;
 import javafx.application.Platform;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Paint;
@@ -11,8 +14,6 @@ import scraper.debugger.dto.FlowMapDTO;
 import scraper.debugger.dto.InstanceDTO;
 import scraper.debugger.frontend.api.FrontendWebSocket;
 import scraper.debugger.frontend.api.FrontendActions;
-import scraper.debugger.tree.PrefixTree;
-import scraper.debugger.tree.Trie;
 
 import java.util.*;
 
@@ -20,7 +21,7 @@ import java.util.*;
 public class FrontendModel extends FrontendWebSocket {
 
     // Complete quasi-static flow tree of the program
-    private final PrefixTree<QuasiStaticNode> TREE = new Trie<>();
+    private final RadixTree<QuasiStaticNode> TREE = new ConcurrentRadixTree<>(new DefaultCharSequenceNodeFactory());
 
     // How nodes are connected, n1 -> map(n2.address, n2)
     private final Map<QuasiStaticNode, Map<String, QuasiStaticNode>> EDGES = new HashMap<>();
@@ -101,14 +102,14 @@ public class FrontendModel extends FrontendWebSocket {
     @Override
     protected void takeIdentifiedFlow(FlowDTO f) {
         QuasiStaticNode node;
-        String ident = f.getIdent();
+        CharSequence ident = f.getIdent();
 
         if (ident.equals("i")) {
             node = SPECIFICATION.getRoot();
             TREE_PANE.putInitial(node.circle);
             node.setOnScreen();
         } else {
-            QuasiStaticNode parentNode = TREE.get(f.getParentIdent());
+            QuasiStaticNode parentNode = TREE.getValueForExactKey(f.getParentIdent());
             node = EDGES.get(parentNode).get(f.getNodeAddress());
             if (!node.isOnScreen()) {
                 Line line = TREE_PANE.put(parentNode.circle, node.circle);
@@ -122,13 +123,13 @@ public class FrontendModel extends FrontendWebSocket {
 
     @Override
     protected void takeBreakpointHit(FlowDTO f) {
-        QuasiStaticNode node = TREE.get(f.getIdent());
+        QuasiStaticNode node = TREE.getValueForExactKey(f.getIdent());
         node.circle.setFill(Paint.valueOf("darksalmon"));
     }
 
     @Override
     protected void takeFinishedFlow(FlowDTO f) {
-        QuasiStaticNode node = TREE.get(f.getIdent());
+        QuasiStaticNode node = TREE.getValueForExactKey(f.getIdent());
         node.addDeparture(f.getIdent());
     }
 

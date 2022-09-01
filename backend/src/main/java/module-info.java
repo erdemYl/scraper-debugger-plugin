@@ -22,9 +22,11 @@ open module scraper.debugger {
     requires org.slf4j;
     requires java.logging;
 
+    // concurrent radix tree
+    requires concurrent.trees;
+
     exports scraper.debugger.core;
     exports scraper.debugger.dto;
-    exports scraper.debugger.tree;
 
     provides Addon with DebuggerHookAddon;
     provides Hook with DebuggerHookAddon, WaitHook;
