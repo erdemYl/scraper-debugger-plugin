@@ -61,7 +61,7 @@ public class DebuggerNodeHook implements NodeHook {
 
     @Override
     public void afterProcess(@NotNull NodeContainer<? extends Node> n, @NotNull FlowMap o) {
-        SERVER.sendFinishedFlow(FI.getDTO(o.getId()));
+        SERVER.sendFinishedFlow(FI.getFlowDTO(o.getId()));
     }
 
     @Override

@@ -2,7 +2,7 @@ package scraper.debugger.frontend.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import scraper.debugger.dto.DataflowDTO;
+import scraper.debugger.dto.FlowMapDTO;
 
 import java.util.Deque;
 import java.util.concurrent.*;
@@ -110,6 +110,7 @@ public final class FrontendActions {
     //=============
 
     public enum LifecycleQuery {
+        ONE,
         WHOLE,
         TO_EMITTER_NODES,
         TO_EMITTER_NOT_FORK_NODES,
@@ -118,6 +119,9 @@ public final class FrontendActions {
 
         private String toRequestString() {
             switch (this) {
+                case ONE: {
+                    return "queryOneFlow";
+                }
                 case WHOLE: {
                     return "queryWholeLifecycle";
                 }
@@ -139,16 +143,25 @@ public final class FrontendActions {
     }
 
 
-    public Deque<DataflowDTO> requestLifecycleQuery(LifecycleQuery query, String ident) throws ExecutionException, InterruptedException {
-        Future<Deque<DataflowDTO>> response = querySender.submit(() -> {
+    public Deque<FlowMapDTO> requestLifecycleQuery(LifecycleQuery query, String ident) {
+        Future<Deque<FlowMapDTO>> response = querySender.submit(() -> {
             try {
                 socket.send(wrap(query.toRequestString(), ident));
-                return socket.getQueryQueue().remove();
+                return socket.getQueryQueue().take();
             } catch (Exception any) {
                 throw new RuntimeException("Cannot request lifecycle query.");
             }
         });
-        return response.get();
+
+        try {
+            return response.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error during getting response from query.");
+        }
+    }
+
+    public FlowMapDTO requestDataflowQuery(String ident) {
+        return requestLifecycleQuery(LifecycleQuery.ONE, ident).pop();
     }
 
 

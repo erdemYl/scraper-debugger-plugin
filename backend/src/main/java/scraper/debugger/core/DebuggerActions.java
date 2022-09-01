@@ -109,6 +109,10 @@ public final class DebuggerActions {
     // QUERY API
     //============
 
+    void queryOneFlow(String ident) {
+        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.ONE, ident));
+    }
+
     void queryWholeLifecycle(String ident) {
         SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.NORMAL, ident));
     }

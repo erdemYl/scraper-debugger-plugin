@@ -6,8 +6,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Pane;
 
-import scraper.debugger.dto.DataflowDTO;
-
+import scraper.debugger.dto.FlowMapDTO;
 
 public class FrontendController {
 
@@ -93,7 +92,7 @@ public class FrontendController {
             if (!nodes.isEmpty()) {
                 QuasiStaticNode node = nodes.getLast();
                 if (node.isOnScreen()) {
-                    node.arrivals().forEach(f -> MODEL.ACTIONS.requestResumeSelected(f.getIdent()));
+                    node.arrivals().forEach(ident -> MODEL.ACTIONS.requestResumeSelected(ident));
                     MODEL.ACTIONS.requestContinueExecution();
                 }
             }
@@ -116,7 +115,7 @@ public class FrontendController {
     @FXML Pane buttonStepSelected;
     @FXML void buttonStepSelectedClicked() {
         if (buttonStepSelected.getOpacity() == 1) {
-            MODEL.currentSelectedFlow().ifPresent(f -> {
+            MODEL.currentSelectedMap().ifPresent(f -> {
                 MODEL.ACTIONS.requestStepSelected(f.getIdent());
                 MODEL.ACTIONS.requestContinueExecution();
             });
@@ -127,7 +126,7 @@ public class FrontendController {
     @FXML Pane buttonContinueSelected;
     @FXML void buttonContinueSelectedClicked() {
         if (buttonContinueSelected.getOpacity() == 1) {
-            MODEL.currentSelectedFlow().ifPresent(f -> {
+            MODEL.currentSelectedMap().ifPresent(f -> {
                 MODEL.ACTIONS.requestResumeSelected(f.getIdent());
                 MODEL.ACTIONS.requestContinueExecution();
             });
@@ -155,7 +154,7 @@ public class FrontendController {
     // Flow Value Table
     //================
 
-    @FXML TableView<DataflowDTO> valueTable;
+    @FXML TableView<FlowMapDTO> valueTable;
 
 
     //================

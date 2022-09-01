@@ -6,7 +6,8 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import scraper.debugger.dto.ControlFlowGraphDTO;
-import scraper.debugger.dto.DataflowDTO;
+import scraper.debugger.dto.FlowDTO;
+import scraper.debugger.dto.FlowMapDTO;
 import scraper.debugger.dto.InstanceDTO;
 import scraper.debugger.frontend.api.FrontendWebSocket;
 import scraper.debugger.frontend.api.FrontendActions;
@@ -37,7 +38,7 @@ public class FrontendModel extends FrontendWebSocket {
 
     private Deque<QuasiStaticNode> CURRENT_SELECTED_NODES = null;
 
-    private DataflowDTO CURRENT_SELECTED_FLOW = null;
+    private FlowMapDTO CURRENT_SELECTED_MAP = null;
 
 
     public FrontendModel(FrontendController CONTROL, String bindingIp, int port) {
@@ -98,7 +99,7 @@ public class FrontendModel extends FrontendWebSocket {
     }
 
     @Override
-    protected void takeIdentifiedFlow(DataflowDTO f) {
+    protected void takeIdentifiedFlow(FlowDTO f) {
         QuasiStaticNode node;
         String ident = f.getIdent();
 
@@ -116,17 +117,17 @@ public class FrontendModel extends FrontendWebSocket {
             }
         }
         TREE.put(ident, node);
-        node.addArrival(f);
+        node.addArrival(ident);
     }
 
     @Override
-    protected void takeBreakpointHit(DataflowDTO f) {
+    protected void takeBreakpointHit(FlowDTO f) {
         QuasiStaticNode node = TREE.get(f.getIdent());
         node.circle.setFill(Paint.valueOf("darksalmon"));
     }
 
     @Override
-    protected void takeFinishedFlow(DataflowDTO f) {
+    protected void takeFinishedFlow(FlowDTO f) {
         QuasiStaticNode node = TREE.get(f.getIdent());
         node.addDeparture(f.getIdent());
     }
@@ -144,15 +145,15 @@ public class FrontendModel extends FrontendWebSocket {
         VALUES.viewValues();
     }
 
-    void takeSelectedFlow(DataflowDTO f) {
-        CURRENT_SELECTED_FLOW = f;
+    void takeSelectedFlow(FlowMapDTO f) {
+        CURRENT_SELECTED_MAP = f;
     }
 
     Optional<Deque<QuasiStaticNode>> currentSelectedNodes() {
         return Optional.ofNullable(CURRENT_SELECTED_NODES);
     }
 
-    Optional<DataflowDTO> currentSelectedFlow() {
-        return Optional.ofNullable(CURRENT_SELECTED_FLOW);
+    Optional<FlowMapDTO> currentSelectedMap() {
+        return Optional.ofNullable(CURRENT_SELECTED_MAP);
     }
 }

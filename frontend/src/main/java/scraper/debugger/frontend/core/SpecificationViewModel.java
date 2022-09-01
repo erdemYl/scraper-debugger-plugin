@@ -15,6 +15,7 @@ import scraper.debugger.dto.NodeDTO;
 import scraper.debugger.frontend.api.FrontendActions;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
@@ -33,7 +34,7 @@ public class SpecificationViewModel {
     private final Service<Deque<QuasiStaticNode>> SELECTION_SERVICE;
 
     // Newly marked cells
-    private final Map<QuasiStaticNode, TreeCell<QuasiStaticNode>> MARKED_CELLS = new HashMap<>();
+    private final Map<QuasiStaticNode, TreeCell<QuasiStaticNode>> MARKED_CELLS = new ConcurrentHashMap<>();
 
     // Newly marked lines
     private final Collection<Line> MARKED_LINES = new LinkedList<>();

@@ -1,7 +1,8 @@
 package scraper.debugger.core;
 
 import scraper.api.*;
-import scraper.debugger.dto.DataflowDTO;
+import scraper.debugger.dto.FlowDTO;
+import scraper.debugger.dto.FlowMapDTO;
 import scraper.debugger.tree.PrefixTree;
 import scraper.debugger.tree.Trie;
 
@@ -42,8 +43,11 @@ public class FlowIdentifier {
         /** Identification of this data flow */
         final String ident;
 
-        /**  Transfer object */
-        final DataflowDTO toSent;
+        /**  Transfer info object, send directly */
+        final FlowDTO infoSend;
+
+        /** Transfer content object, send upon frontend request */
+        final FlowMapDTO contentSend;
 
         /** Whether this flow is flowing to a node, which emits new flows */
         final boolean toFlowEmitterNode;
@@ -57,7 +61,8 @@ public class FlowIdentifier {
         Dataflow(String ident, String pIdent, NodeContainer<? extends Node> n, FlowMap o) {
             NodeAddress address = n.getAddress();
             id = o.getId();
-            toSent = new DataflowDTO(ident, pIdent, address, o);
+            infoSend = new FlowDTO(ident, pIdent, address);
+            contentSend = new FlowMapDTO(ident, o);
             this.ident = ident;
             toFlowEmitterNode = getNodeType(address).isFlowEmitter();
             toForkNode = getNodeType(address).isFork();
@@ -87,7 +92,9 @@ public class FlowIdentifier {
         FP.create(o.getId());
 
         Dataflow f = identifyNew(n, o);
-        SERVER.sendIdentifiedFlow(f.toSent);
+
+        // info dto
+        SERVER.sendIdentifiedFlow(f.infoSend);
     }
 
     private Dataflow identifyNew(NodeContainer<? extends Node> n, FlowMap o) {
@@ -143,9 +150,9 @@ public class FlowIdentifier {
         return f == null ? 0 : treeLevelOf(f.ident);
     }
 
-    public DataflowDTO getDTO(UUID id) {
+    public FlowDTO getFlowDTO(UUID id) {
         Dataflow f = identifiedFlows.get(id);
-        return f == null ? null : f.toSent;
+        return f == null ? null : f.infoSend;
     }
 
     UUID toUUID(String ident) {
@@ -159,6 +166,7 @@ public class FlowIdentifier {
     //=============
 
     enum LifecycleFilter {
+        ONE,                       // only one flow
         NORMAL,                    // all lifecycle
         TO_FLOW_EMITTER,           // flow to nodes that introduce new flows
         TO_FLOW_EMITTER_NOT_FORK,  // flow to nodes that introduce new flows except fork nodes
@@ -166,40 +174,44 @@ public class FlowIdentifier {
         NOT_TO_FLOW_EMITTER        // flow to nodes that do not introduce new flows
     }
 
-    Deque<DataflowDTO> getLifecycle(LifecycleFilter filter, String ident) {
+    Deque<FlowMapDTO> getLifecycle(LifecycleFilter filter, String ident) {
         switch (filter) {
+            case ONE: {
+                FlowMapDTO f = quasiStaticTree.get(ident).contentSend;
+                return new LinkedList<>(List.of(f));
+            }
             case NORMAL: {
                 return quasiStaticTree.getValuesOn(ident)
                         .stream()
-                        .map(f -> f.toSent)
+                        .map(f -> f.contentSend)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
             case TO_FLOW_EMITTER: {
                 return quasiStaticTree.getValuesOn(ident)
                         .stream()
                         .filter(f -> f.toFlowEmitterNode)
-                        .map(f -> f.toSent)
+                        .map(f -> f.contentSend)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
             case TO_FLOW_EMITTER_NOT_FORK: {
                 return quasiStaticTree.getValuesOn(ident)
                         .stream()
                         .filter(f -> f.toFlowEmitterNode && !f.toForkNode)
-                        .map(f -> f.toSent)
+                        .map(f -> f.contentSend)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
             case TO_FORK: {
                 return quasiStaticTree.getValuesOn(ident)
                         .stream()
                         .filter(f -> f.toForkNode)
-                        .map(f -> f.toSent)
+                        .map(f -> f.contentSend)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
             case NOT_TO_FLOW_EMITTER: {
                 return quasiStaticTree.getValuesOn(ident)
                         .stream()
                         .filter(f -> !f.toFlowEmitterNode)
-                        .map(f -> f.toSent)
+                        .map(f -> f.contentSend)
                         .collect(Collectors.toCollection(LinkedList::new));
             }
         }

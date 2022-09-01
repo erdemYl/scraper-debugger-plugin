@@ -44,7 +44,7 @@ public class FlowFilter {
 
                 STATE.waitOnBreakpoint(() -> {
                     STATE.l.log(Level.INFO, format, n.getAddress().getRepresentation());
-                    SERVER.sendBreakpointHit(FI.getDTO(id));
+                    SERVER.sendBreakpointHit(FI.getFlowDTO(id));
                 });
 
                 while(!FP.exists(id)) {
@@ -78,7 +78,7 @@ public class FlowFilter {
                 FP.remove(id);
                 STATE.waitOnBreakpoint(() -> {
                     ACTIONS.l.log(Level.INFO, "{0} in {1}", any.getMessage(), adr);
-                    if (sendBreak) SERVER.sendBreakpointHit(FI.getDTO(id));
+                    if (sendBreak) SERVER.sendBreakpointHit(FI.getFlowDTO(id));
                 });
 
                 while (!FP.exists(id) && !ACTIONS.checkChangeOrAbortMsg(id)) {

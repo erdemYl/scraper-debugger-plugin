@@ -6,24 +6,24 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.StrokeType;
-import scraper.debugger.dto.DataflowDTO;
 import scraper.debugger.dto.NodeDTO;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public final class QuasiStaticNode {
 
     // Arriving flows to this node
-    private final Map<String, DataflowDTO> arrivals = new HashMap<>();
+    private final Set<String> arrivals = ConcurrentHashMap.newKeySet();
 
 
     // Departing flows from this node
-    private final Map<String, DataflowDTO> departures = new HashMap<>();
+    private final Set<String> departures = ConcurrentHashMap.newKeySet();
 
 
     // Circle for tree pane
@@ -81,27 +81,25 @@ public final class QuasiStaticNode {
         }
     }
 
-    synchronized void addArrival(DataflowDTO f) {
-        arrivals.put(f.getIdent(), f);
+    void addArrival(String ident) {
+        arrivals.add(ident);
     }
 
-    synchronized void addDeparture(String ident) {
-        arrivals.computeIfPresent(ident, (i, f) -> {
-            departures.put(i, f);
-            return null;
-        });
+    void addDeparture(String ident) {
+        arrivals.remove(ident);
+        departures.add(ident);
     }
 
-    synchronized Set<DataflowDTO> arrivals() {
-        return Set.copyOf(arrivals.values());
+    Set<String> arrivals() {
+        return arrivals;
     }
 
-    synchronized Set<DataflowDTO> departures() {
-        return Set.copyOf(departures.values());
+    Set<String> departures() {
+        return departures;
     }
 
-    synchronized boolean departed(DataflowDTO f) {
-        return departures.containsKey(f.getIdent());
+    boolean departed(String ident) {
+        return departures.contains(ident);
     }
 
     void addOutgoingLine(QuasiStaticNode other, Line line) {
