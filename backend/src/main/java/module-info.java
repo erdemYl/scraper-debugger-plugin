@@ -1,7 +1,6 @@
 import scraper.api.Addon;
 import scraper.api.Hook;
-import scraper.debugger.addon.DebuggerAddon;
-import scraper.debugger.addon.DebuggerHook;
+import scraper.debugger.addon.DebuggerHookAddon;
 import scraper.debugger.addon.WaitHook;
 
 open module scraper.debugger {
@@ -27,6 +26,6 @@ open module scraper.debugger {
     exports scraper.debugger.dto;
     exports scraper.debugger.tree;
 
-    provides Addon with DebuggerAddon;
-    provides Hook with DebuggerHook, WaitHook;
+    provides Addon with DebuggerHookAddon;
+    provides Hook with DebuggerHookAddon, WaitHook;
 }

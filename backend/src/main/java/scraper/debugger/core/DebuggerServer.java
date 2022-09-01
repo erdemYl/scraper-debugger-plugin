@@ -10,8 +10,7 @@ import org.java_websocket.handshake.ServerHandshakeBuilder;
 import org.java_websocket.server.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scraper.debugger.addon.DebuggerAddon;
-import scraper.debugger.addon.DebuggerHook;
+import scraper.debugger.addon.DebuggerHookAddon;
 import scraper.debugger.dto.*;
 
 import java.lang.reflect.Method;
@@ -34,7 +33,7 @@ public final class DebuggerServer extends WebSocketServer {
     private WebSocket debugger = null;
 
     public DebuggerServer(DebuggerState STATE) {
-        super(new InetSocketAddress(DebuggerAddon.bindingIp, DebuggerAddon.port));
+        super(new InetSocketAddress(DebuggerHookAddon.bindingIp, DebuggerHookAddon.port));
         setReuseAddr(true);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -72,7 +71,7 @@ public final class DebuggerServer extends WebSocketServer {
             debugger = conn;
             l.log(Level.INFO, "Debugger connected");
             l.log(Level.INFO, "Sending specification");
-            sendSpecification(DebuggerHook.getJobInstance(), DebuggerHook.getJobCFG());
+            sendSpecification(DebuggerHookAddon.jobInstance, DebuggerHookAddon.jobCFG);
         } finally {
             lock.unlock();
         }
@@ -99,10 +98,10 @@ public final class DebuggerServer extends WebSocketServer {
             Method m;
             if (content.isEmpty()) {
                 m = DebuggerActions.class.getDeclaredMethod(cmd);
-                m.invoke(DebuggerAddon.ACTIONS);
+                m.invoke(DebuggerHookAddon.ACTIONS);
             } else {
                 m = DebuggerActions.class.getDeclaredMethod(cmd, String.class);
-                m.invoke(DebuggerAddon.ACTIONS, content);
+                m.invoke(DebuggerHookAddon.ACTIONS, content);
             }
         } catch (Exception e) {
             l.log(Level.WARNING, "Invalid message detected from front-end: " + msg);

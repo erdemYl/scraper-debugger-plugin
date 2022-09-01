@@ -49,8 +49,8 @@ public final class QuasiStaticNode {
     // In which key this node emits new data, if not, null
     private final String dataStreamKey;
 
-
     private final String nodeAddress;
+
     private final String nodeType;
 
 
@@ -72,7 +72,8 @@ public final class QuasiStaticNode {
                 dataStreamKey = (String) n.getNodeConfiguration().get("output");
                 return;
             }
-            case "Map": {
+            case "Map":
+            case "MapMap": {
                 dataStreamKey = (String) n.getNodeConfiguration().get("putElement");
                 return;
             }

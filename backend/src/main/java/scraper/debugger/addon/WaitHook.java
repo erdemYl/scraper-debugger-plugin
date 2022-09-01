@@ -1,6 +1,5 @@
 package scraper.debugger.addon;
 
-import scraper.annotations.ArgsCommand;
 import scraper.annotations.NotNull;
 import scraper.api.DIContainer;
 import scraper.api.Hook;
@@ -11,21 +10,12 @@ import scraper.utils.StringUtil;
 
 import java.util.Map;
 
-
-@ArgsCommand(
-        value = "debug",
-        doc = "Waits for a start signal from debugger to execute workflows.",
-        example = "scraper app.scrape debug"
-)
 public class WaitHook implements Hook {
 
     @Override
     public void execute(@NotNull DIContainer dependencies, @NotNull String[] args, @NotNull Map<ScrapeSpecification, ScrapeInstance> scraper)  {
-        boolean debugArg = StringUtil.getArgument(args, "debug") != null;
-        boolean backendArg = StringUtil.getArgument(args, "debugger-backend") != null;
-        if (debugArg || backendArg) {
-            DebuggerState STATE = dependencies.get(DebuggerState.class);
-            STATE.waitUntilStart();
+        if (StringUtil.getArgument(args, "debug") != null) {
+            dependencies.get(DebuggerState.class).waitUntilStart();
         }
     }
 

@@ -1,11 +1,10 @@
 package scraper.debugger.core;
 
 
-import scraper.debugger.addon.DebuggerHook;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import scraper.debugger.addon.DebuggerHookAddon;
 import scraper.debugger.core.FlowIdentifier.LifecycleFilter;
 
 
@@ -50,7 +49,7 @@ public final class DebuggerActions {
     void requestSpecification() {
         // Note that debugger can handle only one specification
         l.log(info, "Requesting specification");
-        SERVER.sendSpecification(DebuggerHook.getJobInstance(), DebuggerHook.getJobCFG());
+        SERVER.sendSpecification(DebuggerHookAddon.jobInstance, DebuggerHookAddon.jobCFG);
     }
 
     void startExecution() {

@@ -24,22 +24,19 @@ public class FrontendModel extends FrontendWebSocket {
     // How nodes are connected, n1 -> map(n2.address, n2)
     private final Map<QuasiStaticNode, Map<String, QuasiStaticNode>> EDGES = new HashMap<>();
 
-
     // Displayed quasi-static flow tree, modified dynamically
     private final TreePane TREE_PANE;
-
 
     // Frontend components
     private final FrontendController CONTROL;
     private final SpecificationViewModel SPECIFICATION;
     private final ValuesViewModel VALUES;
 
-
     // Actions dependency
     final FrontendActions ACTIONS;
 
-
     private Deque<QuasiStaticNode> CURRENT_SELECTED_NODES = null;
+
     private DataflowDTO CURRENT_SELECTED_FLOW = null;
 
 
@@ -103,24 +100,22 @@ public class FrontendModel extends FrontendWebSocket {
     @Override
     protected void takeIdentifiedFlow(DataflowDTO f) {
         QuasiStaticNode node;
-        if (TREE.isEmpty()) {
+        String ident = f.getIdent();
+
+        if (ident.equals("i")) {
             node = SPECIFICATION.getRoot();
-            TREE.put("i", node);
             TREE_PANE.putInitial(node.circle);
             node.setOnScreen();
-
         } else {
-            String parent = f.getParentIdent();
-            QuasiStaticNode parentNode = TREE.get(parent);
+            QuasiStaticNode parentNode = TREE.get(f.getParentIdent());
             node = EDGES.get(parentNode).get(f.getNodeAddress());
             if (!node.isOnScreen()) {
                 Line line = TREE_PANE.put(parentNode.circle, node.circle);
                 parentNode.addOutgoingLine(node, line);
                 node.setOnScreen();
             }
-            TREE.put(f.getIdent(), node);
-            parentNode.addDeparture(parent);
         }
+        TREE.put(ident, node);
         node.addArrival(f);
     }
 
@@ -132,6 +127,8 @@ public class FrontendModel extends FrontendWebSocket {
 
     @Override
     protected void takeFinishedFlow(DataflowDTO f) {
+        QuasiStaticNode node = TREE.get(f.getIdent());
+        node.addDeparture(f.getIdent());
     }
 
     @Override

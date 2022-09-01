@@ -8,12 +8,10 @@ import scraper.debugger.tree.Trie;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static scraper.debugger.addon.DebuggerHook.getNodeType;
+import static scraper.debugger.addon.DebuggerHookAddon.getNodeType;
 
 
 public class FlowIdentifier {
@@ -24,10 +22,6 @@ public class FlowIdentifier {
 
     // Quasi-static flow tree
     private final PrefixTree<Dataflow> quasiStaticTree = new Trie<>();
-
-
-    // Branch lock provider
-    private final LockProvider lockProvider = new LockProvider();
 
 
     // Debugger components
@@ -80,44 +74,6 @@ public class FlowIdentifier {
     }
 
 
-    private static class LockProvider {
-        private final Trie<Lock> locks;
-        private final Lock defaultLock;
-
-        private LockProvider() {
-            locks = new Trie<>();
-            defaultLock = new ReentrantLock(true);
-            locks.put("i", defaultLock);
-        }
-
-        public void generateLock(String ident) {
-            locks.put(ident, new ReentrantLock(true));
-        }
-
-
-        public void lock(String ident) {
-            Lock l;
-            if (ident.startsWith("i")) {
-                l = locks.getLongestMatchedEntry(ident).getValue();
-            } else {
-                l = defaultLock;
-            }
-            l.lock();
-        }
-
-        public void unlock(String ident) {
-            Lock l;
-            if (ident.startsWith("i")) {
-                l = locks.getLongestMatchedEntry(ident).getValue();
-            } else {
-                l = defaultLock;
-            }
-            l.unlock();
-        }
-    }
-
-
-
     //=============
     // Identify
     //=============
@@ -149,26 +105,12 @@ public class FlowIdentifier {
             Dataflow pFlow = identifiedFlows.get(parent);
             ident =  pFlow.next();
             flow = new Dataflow(ident, pFlow.ident, n, o);
-            if (pFlow.toForkNode) lockProvider.generateLock(ident);
         }
 
         identifiedFlows.put(id, flow);
         quasiStaticTree.put(ident, flow);
         return flow;
     }
-
-
-    public void acquireBranchLock(UUID id) {
-        String ident = getOptional(id).orElse("i");
-        lockProvider.lock(ident);
-    }
-
-
-    public void releaseBranchLock(UUID id) {
-        String ident = getOptional(id).orElse("i");
-        lockProvider.unlock(ident);
-    }
-
 
     public void forEachIdentified(Consumer<UUID> consumer) {
         identifiedFlows.keySet().forEach(consumer);
