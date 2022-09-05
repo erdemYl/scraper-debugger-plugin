@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scraper.debugger.dto.*;
 
 import java.net.URI;
@@ -11,6 +13,8 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public abstract class FrontendWebSocket extends WebSocketClient {
+
+    protected final Logger l = LoggerFactory.getLogger("DebuggerClient");
 
     // Query response queue
     private final BlockingQueue<Deque<FlowMapDTO>> queryQueue = new SynchronousQueue<>(true);
@@ -27,6 +31,7 @@ public abstract class FrontendWebSocket extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake serverHandshake) {
+        Thread.currentThread().setName("channel-f");
     }
 
     @Override
@@ -75,7 +80,7 @@ public abstract class FrontendWebSocket extends WebSocketClient {
                             }
                             queryQueue.put(converted);
                         } catch (JsonProcessingException | InterruptedException e) {
-                            System.getLogger("Frontend").log(System.Logger.Level.WARNING, "Query error");
+                            l.warn("Query error");
                             e.printStackTrace();
                             queryQueue.add(new LinkedList<>());
                         }
@@ -94,6 +99,7 @@ public abstract class FrontendWebSocket extends WebSocketClient {
 
     @Override
     public void onError(Exception e) {
+        l.error("Connection error: {}", e.getMessage());
     }
 
 

@@ -4,6 +4,8 @@ package scraper.debugger.core;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scraper.debugger.addon.DebuggerHookAddon;
 import scraper.debugger.core.FlowIdentifier.LifecycleFilter;
 
@@ -12,8 +14,7 @@ import scraper.debugger.core.FlowIdentifier.LifecycleFilter;
 public final class DebuggerActions {
 
     // Logger with actually intended name
-    public final System.Logger l = System.getLogger("Debugger");
-    private final System.Logger.Level info = System.Logger.Level.INFO;
+    final Logger l = LoggerFactory.getLogger("Debugger");
 
     // Frontend left-messages
     private final Set<UUID> leftMessages;
@@ -47,8 +48,6 @@ public final class DebuggerActions {
     //==============
 
     void requestSpecification() {
-        // Note that debugger can handle only one specification
-        l.log(info, "Requesting specification");
         SERVER.sendSpecification(DebuggerHookAddon.jobInstance, DebuggerHookAddon.jobCFG);
     }
 
@@ -66,7 +65,7 @@ public final class DebuggerActions {
 
     void stopExecution() {
         FP.removeAll();
-        STATE.l.log(info, "ALL FLOWS STOPPED");
+        STATE.l.info("Workflow stopped");
     }
 
     void stepAll() {

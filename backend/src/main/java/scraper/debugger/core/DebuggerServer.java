@@ -19,15 +19,13 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
-import java.lang.System.Logger.Level;
 
 /**
  * Server component of the Debugger.
  */
 public final class DebuggerServer extends WebSocketServer {
 
-    public final System.Logger l = System.getLogger("DebuggerServer");
-    private final Logger l2 = LoggerFactory.getLogger("DebuggerServer");
+    private final Logger l = LoggerFactory.getLogger("DebuggerServer");
     private final ReentrantLock lock = new ReentrantLock();
     private final ObjectMapper m = new ObjectMapper();
     private WebSocket debugger = null;
@@ -37,13 +35,13 @@ public final class DebuggerServer extends WebSocketServer {
         setReuseAddr(true);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            Thread.currentThread().setName("DebuggerShutdown");
+            Thread.currentThread().setName("shutdown");
             try {
-                l2.warn("Shutting down system");
+                l.warn("Shutting down system");
                 STATE.setContinue();
                 stop();
                 // Why only slf4j logger prints this?
-                l2.warn("Graceful shutdown");
+                l.warn("Graceful shutdown");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -69,8 +67,8 @@ public final class DebuggerServer extends WebSocketServer {
         try {
             lock.lock();
             debugger = conn;
-            l.log(Level.INFO, "Debugger connected");
-            l.log(Level.INFO, "Sending specification");
+            Thread.currentThread().setName("channel-b");
+            l.info("Debugger connected, sending workflow specification");
             sendSpecification(DebuggerHookAddon.jobInstance, DebuggerHookAddon.jobCFG);
         } finally {
             lock.unlock();
@@ -85,7 +83,8 @@ public final class DebuggerServer extends WebSocketServer {
         } finally {
             lock.unlock();
         }
-        l.log(Level.WARNING, "Debugger disconnected");
+        //l.log(Level.WARNING, "Debugger disconnected");
+        l.warn("Debugger disconnected");
     }
 
     @Override
@@ -104,7 +103,7 @@ public final class DebuggerServer extends WebSocketServer {
                 m.invoke(DebuggerHookAddon.ACTIONS, content);
             }
         } catch (Exception e) {
-            l.log(Level.WARNING, "Invalid message detected from front-end: " + msg);
+            l.warn("Invalid message detected from front-end: {}", msg);
         } finally {
             lock.unlock();
         }
@@ -112,10 +111,13 @@ public final class DebuggerServer extends WebSocketServer {
 
     @Override
     public void onError(WebSocket conn, Exception e) {
+        l.error("Connection error: {}", e.getMessage());
+        DebuggerHookAddon.ACTIONS.stopExecution();
     }
 
     @Override
     public void onStart() {
+        Thread.currentThread().setName("selector");
     }
 
 
@@ -214,7 +216,7 @@ public final class DebuggerServer extends WebSocketServer {
                 }
                 debugger.send(wrap("flowLifecycle", written));
             } catch (JsonProcessingException e) {
-                l.log(Level.WARNING, "Unable to send flow lifecycle");
+                l.warn("Unable to send flow lifecycle");
             }
         }
     }

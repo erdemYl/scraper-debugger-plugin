@@ -191,20 +191,20 @@ public class ValuesViewModel {
                                         .limit(last)
                                         .map(valueColumns::get)
                                         .filter(Objects::nonNull)
-                                        .collect(Collectors.toUnmodifiableList());
+                                        .collect(Collectors.toList());
 
                                 // Renew items and add columns
                                 ObservableList<TableColumn<FlowMapDTO, ?>> currentViewedColumns = VALUE_TABLE.getColumns();
 
-                                Set<FlowMapDTO> arrivals = node.arrivals()
+                                List<FlowMapDTO> arrivals = node.arrivals()
                                         .parallelStream()
                                         .map(MODEL.ACTIONS::requestDataflowQuery)
-                                        .collect(Collectors.toSet());
+                                        .collect(Collectors.toList());
 
-                                Set<FlowMapDTO> departures = node.departures()
+                                List<FlowMapDTO> departures = node.departures()
                                         .parallelStream()
                                         .map(MODEL.ACTIONS::requestDataflowQuery)
-                                        .collect(Collectors.toSet());
+                                        .collect(Collectors.toList());
 
                                 Platform.runLater(() -> {
                                     currentViewedFlows.clear();
@@ -216,7 +216,6 @@ public class ValuesViewModel {
                                     waitingFlowNumber.setValue("Waiting: " + arrivals.size());
                                     processedFlowNumber.setValue("Processed: " + departures.size());
                                 });
-                                System.gc();
                             }
                         });
                         return null;

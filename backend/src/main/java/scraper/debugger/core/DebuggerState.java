@@ -1,16 +1,18 @@
 package scraper.debugger.core;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scraper.api.*;
 import scraper.util.NodeUtil;
 
-import java.lang.System.Logger.Level;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class DebuggerState {
 
-    final System.Logger l = System.getLogger("DebuggerState");
+    //final System.Logger l = System.getLogger("DebuggerState");
+    final Logger l = LoggerFactory.getLogger("DebuggerState");
 
     // flows will wait on this object
     private final Object breaking = new Object();
@@ -22,7 +24,7 @@ public final class DebuggerState {
         synchronized (start) {
             try {
                 if (!start.get()) {
-                    l.log(Level.INFO, "Waiting for debugger to connect");
+                    l.info("Waiting for debugger to connect");
                     start.wait();
                 }
             } catch (Exception ignored) {}
@@ -32,6 +34,7 @@ public final class DebuggerState {
     void setStart() {
         synchronized (start) {
             start.set(true);
+            l.info("Workflow started");
             start.notifyAll();
         }
     }
@@ -51,7 +54,7 @@ public final class DebuggerState {
                 onWait.run();
                 breaking.wait();
             } catch (InterruptedException e) {
-                l.log(Level.INFO, "Continuing because interrupt");
+                l.warn("Continuing because interrupt");
             }
         }
     }
@@ -61,7 +64,7 @@ public final class DebuggerState {
             try {
                 breaking.wait();
             } catch (InterruptedException e) {
-                l.log(Level.INFO, "Continuing because interrupt");
+                l.warn("Continuing because interrupt");
             }
         }
     }
@@ -71,7 +74,8 @@ public final class DebuggerState {
     }
 
     void addBreakpoint(String address) {
-        breakpoints.add(NodeUtil.addressOf(address));
+        if (breakpoints.add(NodeUtil.addressOf(address)))
+            l.debug("Breakpoint added: {}", address);
     }
 
     @Override

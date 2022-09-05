@@ -1,5 +1,7 @@
 package scraper.debugger.addon;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scraper.annotations.ArgsCommand;
 import scraper.annotations.NotNull;
 import scraper.api.*;
@@ -31,8 +33,7 @@ import java.util.Optional;
 )
 public class DebuggerHookAddon implements Addon, Hook {
 
-    private final System.Logger l = System.getLogger("Debugger");
-    private final System.Logger.Level warn = System.Logger.Level.WARNING;
+    private final Logger l = LoggerFactory.getLogger("Debugger");
 
     public static String bindingIp;
 
@@ -45,7 +46,6 @@ public class DebuggerHookAddon implements Addon, Hook {
 
 
     public static ControlFlowGraphDTO jobCFG;
-
 
     private static final Map<NodeAddress, NodeType> debuggerNodeTypes = new HashMap<>();
 
@@ -92,7 +92,7 @@ public class DebuggerHookAddon implements Addon, Hook {
     @Override
     public void load(@NotNull DIContainer dependencies, @NotNull String[] args) {
         if (StringUtil.getArgument(args, "debug") != null) {
-            l.log(warn, "Debugging activated");
+            l.warn("Debugging activated");
             String debugPort = StringUtil.getArgument(args, "debug-port");
             String debugIp = StringUtil.getArgument(args, "debug-ip");
             bindingIp = "0.0.0.0";
