@@ -3,8 +3,6 @@ package scraper.debugger.core;
 import scraper.api.*;
 
 import java.util.UUID;
-import java.lang.System.Logger.Level;
-
 
 public class FlowFilter {
 
@@ -40,10 +38,10 @@ public class FlowFilter {
             }
 
             if (!FP.exists(id)) {
-                String format = step ? "STEP -> {0}" : "BREAKPOINT -> {0}";
+                String format = step ? "Step" : "Breakpoint";
 
                 STATE.waitOnBreakpoint(() -> {
-                    STATE.l.log(Level.INFO, format, n.getAddress().getRepresentation());
+                    STATE.l.info(format);
                     SERVER.sendBreakpointHit(FI.getFlowDTO(id));
                 });
 
@@ -66,7 +64,6 @@ public class FlowFilter {
         if (n.getKeySpec("failOnException").isPresent()) {
             FlowMap copy = o.copy();
             UUID id = o.getId();
-            String adr = n.getAddress().toString();
             Node node = n.getC();
             try {
                 // checks only fun-nodes since they can't forward or emit flows
@@ -77,7 +74,7 @@ public class FlowFilter {
             catch (Exception any) {
                 FP.remove(id);
                 STATE.waitOnBreakpoint(() -> {
-                    ACTIONS.l.log(Level.INFO, "{0} in {1}", any.getMessage(), adr);
+                    ACTIONS.l.info(any.getMessage());
                     if (sendBreak) SERVER.sendBreakpointHit(FI.getFlowDTO(id));
                 });
 

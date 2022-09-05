@@ -43,7 +43,7 @@ public final class FrontendActions {
 
     public void requestStartExecution() {
         executionSender.execute(() -> {
-            if (!executionStarted) {
+            if (!executionStarted && socket.isOpen()) {
                 executionStarted = true;
                 socket.send(wrap("startExecution", ""));
             }
@@ -52,13 +52,13 @@ public final class FrontendActions {
 
     public void requestContinueExecution() {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("continueExecution", ""));
+            if (executionStarted && socket.isOpen()) socket.send(wrap("continueExecution", ""));
         });
     }
 
     public void requestStopExecution() {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("stopExecution", ""));
+            if (executionStarted && socket.isOpen()) socket.send(wrap("stopExecution", ""));
         });
     }
 
@@ -70,37 +70,37 @@ public final class FrontendActions {
 
     public void requestResumeSelected(CharSequence ident) {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("resumeSelected", ident));
+            if (executionStarted && socket.isOpen()) socket.send(wrap("resumeSelected", ident));
         });
     }
 
     public void requestStopSelected(CharSequence ident) {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("stopSelected", ident));
+            if (executionStarted && socket.isOpen()) socket.send(wrap("stopSelected", ident));
         });
     }
 
     public void requestResumeAllContinueExecution() {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("resumeAllContinueExecution", ""));
+            if (executionStarted && socket.isOpen()) socket.send(wrap("resumeAllContinueExecution", ""));
         });
     }
 
     public void requestStepAll() {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("stepAll", ""));
+            if (executionStarted && socket.isOpen()) socket.send(wrap("stepAll", ""));
         });
     }
 
     public void requestStepAllContinueExecution() {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("stepAllContinueExecution", ""));
+            if (executionStarted && socket.isOpen()) socket.send(wrap("stepAllContinueExecution", ""));
         });
     }
 
     public void requestStepSelected(CharSequence ident) {
         executionSender.execute(() -> {
-            if (executionStarted) socket.send(wrap("stepSelected", ident));
+            if (executionStarted && socket.isOpen()) socket.send(wrap("stepSelected", ident));
         });
     }
 

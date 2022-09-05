@@ -11,6 +11,7 @@ import scraper.debugger.dto.FlowMapDTO;
 public class FrontendController {
 
     private String style = "-fx-background-color: cornsilk";
+
     private boolean executionStarted = false;
 
     private FrontendModel MODEL;
