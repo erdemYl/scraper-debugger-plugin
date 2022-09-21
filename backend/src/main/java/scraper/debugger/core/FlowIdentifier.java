@@ -1,6 +1,5 @@
 package scraper.debugger.core;
 
-import com.googlecode.concurrenttrees.common.Iterables;
 import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharSequenceNodeFactory;
 import com.googlecode.concurrenttrees.radixinverted.ConcurrentInvertedRadixTree;
 import com.googlecode.concurrenttrees.radixinverted.InvertedRadixTree;
@@ -106,8 +105,8 @@ public class FlowIdentifier {
         CharSequence ident;
         Dataflow flow;
 
-        if (parent == null || !exists(parent)) {
-            // initial flow
+        if (!exists(parent)) {// initial flow
+            FP.create(parent); // parent of initial flow has always permission
             ident = "i";
             flow = new Dataflow("i", "", address, o);
         } else {
@@ -169,7 +168,7 @@ public class FlowIdentifier {
 
 
     //=============
-    // Lifecycle (in progress)
+    // Lifecycle
     //=============
 
     enum LifecycleFilter {
@@ -188,7 +187,8 @@ public class FlowIdentifier {
         }
 
         Iterable<Dataflow> lifecycle = quasiStaticTree.getValuesForKeysContainedIn(ident);
-        List<Dataflow> flows = Iterables.toList(lifecycle);
+        List<Dataflow> flows = new LinkedList<>();
+        lifecycle.forEach(flows::add);
 
         switch (filter) {
             case NORMAL: {

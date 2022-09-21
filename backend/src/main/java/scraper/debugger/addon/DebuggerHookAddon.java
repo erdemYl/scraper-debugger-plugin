@@ -12,9 +12,8 @@ import scraper.plugins.core.flowgraph.FlowUtil;
 import scraper.plugins.core.flowgraph.api.ControlFlowGraph;
 import scraper.utils.StringUtil;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @ArgsCommand(
         value = "debug",
@@ -39,11 +38,12 @@ public class DebuggerHookAddon implements Addon, Hook {
     public static DebuggerActions ACTIONS;
     public static InstanceDTO jobInstance;
     public static ControlFlowGraphDTO jobCFG;
-    private static final Map<NodeAddress, NodeType> debuggerNodeTypes = new HashMap<>();
 
-    public static NodeType getNodeType(NodeAddress address) {
-        return debuggerNodeTypes.get(address);
-    }
+    static final Set<UUID> activeFlows = ConcurrentHashMap.newKeySet();
+    public static boolean workflowFinished() { return activeFlows.parallelStream().findAny().isEmpty(); }
+
+    private static final Map<NodeAddress, NodeType> debuggerNodeTypes = new HashMap<>();
+    public static NodeType getNodeType(NodeAddress address) { return debuggerNodeTypes.get(address); }
 
     public enum NodeType {
         FORK, STREAM_NODE, MAP, MAP_MAP, ON_WAY;
@@ -123,6 +123,7 @@ public class DebuggerHookAddon implements Addon, Hook {
 
                 ins.getHooks().add(
                         new DebuggerNodeHook(
+                                ins.getRoutes().keySet(),
                                 dependencies.get(DebuggerServer.class),
                                 dependencies.get(FlowIdentifier.class),
                                 dependencies.get(FlowFilter.class)));

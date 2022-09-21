@@ -11,9 +11,7 @@ import scraper.debugger.dto.FlowMapDTO;
 public class FrontendController {
 
     private String style = "-fx-background-color: cornsilk";
-
-    private boolean executionStarted = false;
-
+    private boolean started = false;
     private FrontendModel MODEL;
 
     public void setModel(FrontendModel MODEL) { this.MODEL = MODEL; }
@@ -55,18 +53,23 @@ public class FrontendController {
 
     @FXML Label buttonConnect;
     @FXML void buttonConnectClicked() {
-        MODEL.ACTIONS.connectToBackend();
-        buttonConnect.setText("Connected");
+        if (buttonConnect.getText().equals("Disconnected")) {
+            MODEL.ACTIONS.connect();
+            buttonConnect.setText("Connected");
+        } else {
+            MODEL.ACTIONS.disconnect();
+            buttonConnect.setText("Disconnected");
+        }
     }
 
 
     @FXML Pane buttonContinueExecution;
     @FXML void buttonContinueExecutionClicked() {
-        if (executionStarted) {
-            MODEL.ACTIONS.requestResumeAllContinueExecution();
+        if (started) {
+            MODEL.ACTIONS.requestResumeAll();
+            MODEL.ACTIONS.requestContinueExecution();
         } else {
-            executionStarted = true;
-            MODEL.ACTIONS.requestStartExecution();
+            started = MODEL.ACTIONS.requestStartExecution();
             buttonStepAllContinueExecution.setOpacity(1);
             buttonContinueFlowsInNode.setOpacity(1);
         }
@@ -85,7 +88,8 @@ public class FrontendController {
 
     @FXML AnchorPane buttonStepAllContinueExecution;
     @FXML void buttonStepAllContinueExecutionClicked() {
-        MODEL.ACTIONS.requestStepAllContinueExecution();
+        MODEL.ACTIONS.requestStepAll();
+        MODEL.ACTIONS.requestContinueExecution();
     }
 
 

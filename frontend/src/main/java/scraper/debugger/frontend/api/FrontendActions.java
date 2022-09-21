@@ -19,8 +19,7 @@ public final class FrontendActions {
     // Json object mapper
     private final ObjectMapper m = new ObjectMapper();
 
-    private final AtomicBoolean connected = new AtomicBoolean(false);
-    private boolean executionStarted = false;
+    private final AtomicBoolean firstConnection = new AtomicBoolean(true);
 
     public FrontendActions(FrontendWebSocket socket) {
         this.socket = socket;
@@ -28,80 +27,51 @@ public final class FrontendActions {
         querySender = Executors.newSingleThreadExecutor();
     }
 
-    public void connectToBackend() {
-        synchronized (connected) {
-            if (!connected.get()) {
-                socket.connect();
-                connected.set(true);
-            }
-        }
+    public void connect() {
+        executionSender.execute(() -> {
+            if (firstConnection.getAndSet(false)) socket.connect();
+            else socket.reconnect();
+        });
+    }
+
+    public void disconnect() {
+        executionSender.execute(socket::close);
     }
 
     //================
     // EXECUTION API
     //================
 
-    public void requestStartExecution() {
-        executionSender.execute(() -> {
-            if (!executionStarted && socket.isOpen()) {
-                executionStarted = true;
-                socket.send(wrap("startExecution", ""));
-            }
-        });
+    public boolean requestStartExecution() {
+        return event(() -> socket.send(wrap("startExecution", "")));
     }
 
     public void requestContinueExecution() {
-        executionSender.execute(() -> {
-            if (executionStarted && socket.isOpen()) socket.send(wrap("continueExecution", ""));
-        });
+        event(() -> socket.send(wrap("continueExecution", "")));
     }
 
     public void requestStopExecution() {
-        executionSender.execute(() -> {
-            if (executionStarted && socket.isOpen()) socket.send(wrap("stopExecution", ""));
-        });
+        event(() -> socket.send(wrap("stopExecution", "")));
     }
 
-    public void requestSetBreakpoint(String address) {
-        executionSender.execute(() -> {
-            socket.send(wrap("setBreakpoint", address));
-        });
+    public boolean requestSetBreakpoint(String address) {
+        return event(() -> socket.send(wrap("setBreakpoint", address)));
     }
 
     public void requestResumeSelected(CharSequence ident) {
-        executionSender.execute(() -> {
-            if (executionStarted && socket.isOpen()) socket.send(wrap("resumeSelected", ident));
-        });
+        event(() -> socket.send(wrap("resumeSelected", ident)));
     }
 
-    public void requestStopSelected(CharSequence ident) {
-        executionSender.execute(() -> {
-            if (executionStarted && socket.isOpen()) socket.send(wrap("stopSelected", ident));
-        });
-    }
-
-    public void requestResumeAllContinueExecution() {
-        executionSender.execute(() -> {
-            if (executionStarted && socket.isOpen()) socket.send(wrap("resumeAllContinueExecution", ""));
-        });
+    public void requestResumeAll() {
+        event(() -> socket.send(wrap("resumeAll", "")));
     }
 
     public void requestStepAll() {
-        executionSender.execute(() -> {
-            if (executionStarted && socket.isOpen()) socket.send(wrap("stepAll", ""));
-        });
-    }
-
-    public void requestStepAllContinueExecution() {
-        executionSender.execute(() -> {
-            if (executionStarted && socket.isOpen()) socket.send(wrap("stepAllContinueExecution", ""));
-        });
+        event(() -> socket.send(wrap("stepAll", "")));
     }
 
     public void requestStepSelected(CharSequence ident) {
-        executionSender.execute(() -> {
-            if (executionStarted && socket.isOpen()) socket.send(wrap("stepSelected", ident));
-        });
+        event(() -> socket.send(wrap("stepSelected", ident)));
     }
 
     public void requestAbortSelected(CharSequence ident) {
@@ -148,7 +118,6 @@ public final class FrontendActions {
         }
     }
 
-
     public Deque<FlowMapDTO> requestLifecycleQuery(LifecycleQuery query, CharSequence ident) {
         Future<Deque<FlowMapDTO>> response = querySender.submit(() -> {
             try {
@@ -170,6 +139,13 @@ public final class FrontendActions {
         return requestLifecycleQuery(LifecycleQuery.ONE, ident).pop();
     }
 
+    private boolean event(Runnable run) {
+        if (socket.isOpen()) {
+            executionSender.execute(run);
+            return true;
+        }
+        return false;
+    }
 
     private String wrap(String request, Object content) {
         try {

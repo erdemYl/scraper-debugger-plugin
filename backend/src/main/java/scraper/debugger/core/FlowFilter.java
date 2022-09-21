@@ -22,49 +22,48 @@ public class FlowFilter {
     }
 
     public void filter(NodeContainer<? extends Node> n, FlowMap o) {
-        o.getParentId().ifPresent(parent -> {
-            UUID id = o.getId();
-            boolean step = false;
+        UUID parent = o.getParentId().orElseThrow(() -> new NodeException("Distinct service group needed!"));
+        UUID id = o.getId();
+        boolean step = false;
 
-            // check permission, inherited from parent
-            if (!FP.exists(parent) && FI.exists(parent)) {
+        // check permission, inherited from parent
+        if (!FP.exists(parent)) {
+            FP.remove(id);
+            step = true;
+        } else {
+            // check breakpoint
+            if (STATE.isBreakpoint(n.getAddress())) {
                 FP.remove(id);
-                step = true;
-            } else {
-                // check breakpoint
-                if (STATE.isBreakpoint(n.getAddress())) {
-                    FP.remove(id);
-                }
+            }
+        }
+
+        if (!FP.exists(id)) {
+            String format = step ? "Step" : "Breakpoint";
+
+            STATE.waitOnBreakpoint(() -> {
+                STATE.l.info(format);
+                SERVER.sendBreakpointHit(FI.getFlowDTO(id));
+            });
+
+            while(!FP.exists(id)) {
+                STATE.waitOnBreakpoint();
             }
 
-            if (!FP.exists(id)) {
-                String format = step ? "Step" : "Breakpoint";
-
-                STATE.waitOnBreakpoint(() -> {
-                    STATE.l.info(format);
-                    SERVER.sendBreakpointHit(FI.getFlowDTO(id));
-                });
-
-                while(!FP.exists(id)) {
-                    STATE.waitOnBreakpoint();
-                }
-
                 // message box
-                ACTIONS.checkLeftMessages(id,
-                        () -> FP.remove(id),
-                        () -> {
+            ACTIONS.checkLeftMessages(id,
+                    () -> FP.remove(id),
+                    () -> {
                             FI.markAborted(n.getAddress(), o);
                             STATE.l.info("Abort");
                             throw new NodeException("Abort");
                         }
                 );
 
-                checkException(n, o, false);
-                return;
-            }
+            checkException(n, o, false);
+            return;
+        }
 
-            checkException(n, o, true);
-        });
+        checkException(n, o, true);
     }
 
     private void checkException(NodeContainer<? extends Node> n, FlowMap o, boolean sendBreak) {

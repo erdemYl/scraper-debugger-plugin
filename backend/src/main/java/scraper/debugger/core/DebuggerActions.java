@@ -56,17 +56,22 @@ public final class DebuggerActions {
         STATE.setStart();
     }
 
-    void setBreakpoint(CharSequence address) {
-        STATE.addBreakpoint(address.toString());
-    }
-
     void continueExecution() {
         STATE.setContinue();
+        // auto send finish signal
+        if (DebuggerHookAddon.workflowFinished()) {
+            STATE.l.info("Workflow finished");
+            SERVER.sendFinishSignal();
+        }
     }
 
     void stopExecution() {
         FP.removeAll();
-        STATE.l.info("Workflow stopped");
+        if (!DebuggerHookAddon.workflowFinished()) STATE.l.info("Workflow stopped");
+    }
+
+    void setBreakpoint(CharSequence address) {
+        STATE.addBreakpoint(address.toString());
     }
 
     void stepAll() {
@@ -90,24 +95,10 @@ public final class DebuggerActions {
         FP.create(FI.toUUID(ident));
     }
 
-    void stopSelected(CharSequence ident) {
-        FP.remove(FI.toUUID(ident));
-    }
-
     void abortSelected(CharSequence ident) {
         UUID id = FI.toUUID(ident);
         leftMessages.put(id, Message.ABORT);
         FP.create(id);
-    }
-
-    void stepAllContinueExecution() {
-        stepAll();
-        continueExecution();
-    }
-
-    void resumeAllContinueExecution() {
-        resumeAll();
-        continueExecution();
     }
 
 

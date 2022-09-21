@@ -28,18 +28,21 @@ public final class DebuggerServer extends WebSocketServer {
     private final Logger l = LoggerFactory.getLogger("DebuggerServer");
     private final ReentrantLock lock = new ReentrantLock();
     private final ObjectMapper m = new ObjectMapper();
-    private WebSocket debugger = null;
+    private volatile WebSocket debugger = null;
+    private final DebuggerState STATE;
 
     public DebuggerServer(DebuggerState STATE) {
         super(new InetSocketAddress(DebuggerHookAddon.bindingIp, DebuggerHookAddon.port));
         setReuseAddr(true);
+        this.STATE = STATE;
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Thread.currentThread().setName("shutdown");
             try {
                 l.warn("Shutting down system");
-                STATE.setContinue();
                 stop();
+                STATE.setContinue();
+                STATE.setConnected();
                 // Why only slf4j logger prints this?
                 l.warn("Graceful shutdown");
             } catch (InterruptedException e) {
@@ -67,6 +70,7 @@ public final class DebuggerServer extends WebSocketServer {
         try {
             lock.lock();
             debugger = conn;
+            STATE.setConnected();  // for the case of reconnection
             Thread.currentThread().setName("channel-b");
             l.info("Debugger connected, sending workflow specification");
             sendSpecification(DebuggerHookAddon.jobInstance, DebuggerHookAddon.jobCFG);
@@ -80,10 +84,11 @@ public final class DebuggerServer extends WebSocketServer {
         try {
             lock.lock();
             debugger = null;
+            DebuggerHookAddon.ACTIONS.stopExecution();
+            l.warn("Debugger disconnected");
         } finally {
             lock.unlock();
         }
-        l.warn("Debugger disconnected");
     }
 
     @Override
@@ -145,14 +150,13 @@ public final class DebuggerServer extends WebSocketServer {
      * Wraps with type "identifiedFlow".
      */
     void sendIdentifiedFlow(FlowDTO f) {
-        if (debugger != null) {
-            try {
-                debugger.send(wrap("identifiedFlow", Map.of(
-                        "flow", m.writeValueAsString(f))
-                ));
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-            }
+        if (debugger == null) STATE.waitOnConnectionLoss();
+        try {
+            debugger.send(wrap("identifiedFlow", Map.of(
+                    "flow", m.writeValueAsString(f))
+            ));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
         }
     }
 
@@ -161,14 +165,13 @@ public final class DebuggerServer extends WebSocketServer {
      * Wraps with type "breakpointHit"
      */
     void sendBreakpointHit(FlowDTO f) {
-        if (debugger != null) {
-            try {
-                debugger.send(wrap("breakpointHit", Map.of(
-                        "flow", m.writeValueAsString(f))
-                ));
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-            }
+        if (debugger == null) STATE.waitOnConnectionLoss();
+        try {
+            debugger.send(wrap("breakpointHit", Map.of(
+                    "flow", m.writeValueAsString(f))
+            ));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
         }
     }
 
@@ -177,14 +180,13 @@ public final class DebuggerServer extends WebSocketServer {
      * Wraps with type "finishedFlow".
      */
     public void sendFinishedFlow(FlowDTO f) {
-        if (debugger != null) {
-            try {
-                debugger.send(wrap("finishedFlow", Map.of(
-                        "flow", m.writeValueAsString(f))
-                ));
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-            }
+        if (debugger == null) STATE.waitOnConnectionLoss();
+        try {
+            debugger.send(wrap("finishedFlow", Map.of(
+                    "flow", m.writeValueAsString(f))
+            ));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
         }
     }
 
@@ -193,8 +195,17 @@ public final class DebuggerServer extends WebSocketServer {
      * Wraps with type "log".
      */
     public void sendLogMessage(String formattedMsg) {
+        if (debugger == null) STATE.waitOnConnectionLoss();
+        debugger.send(wrap("log", formattedMsg));
+    }
+
+
+    /**
+     * Wraps with type "finish"
+     */
+    public void sendFinishSignal() {
         if (debugger != null) {
-            debugger.send(wrap("log", formattedMsg));
+            debugger.send(wrap("finish", ""));
         }
     }
 
@@ -219,7 +230,6 @@ public final class DebuggerServer extends WebSocketServer {
             }
         }
     }
-
 
     /**
      * Data to string wrapper. The wrapping format is a map with
