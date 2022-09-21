@@ -1,5 +1,6 @@
 package scraper.debugger.core;
 
+import com.googlecode.concurrenttrees.common.Iterables;
 import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharSequenceNodeFactory;
 import com.googlecode.concurrenttrees.radixinverted.ConcurrentInvertedRadixTree;
 import com.googlecode.concurrenttrees.radixinverted.InvertedRadixTree;
@@ -59,8 +60,7 @@ public class FlowIdentifier {
         /** Next assignable postfix integer for identification */
         final AtomicInteger postfix = new AtomicInteger(0);
 
-        Dataflow(CharSequence ident, CharSequence pIdent, NodeContainer<? extends Node> n, FlowMap o) {
-            NodeAddress address = n.getAddress();
+        Dataflow(CharSequence ident, CharSequence pIdent, NodeAddress address, FlowMap o) {
             id = o.getId();
             infoSend = new FlowDTO(ident, pIdent, address);
             contentSend = new FlowMapDTO(ident, o);
@@ -93,13 +93,13 @@ public class FlowIdentifier {
         // each flow initially has permission
         FP.create(o.getId());
 
-        Dataflow f = identifyNew(n, o);
+        Dataflow f = identifyNew(n.getAddress(), o);
 
         // info dto
         SERVER.sendIdentifiedFlow(f.infoSend);
     }
 
-    private Dataflow identifyNew(NodeContainer<? extends Node> n, FlowMap o) {
+    private Dataflow identifyNew(NodeAddress address, FlowMap o) {
         UUID parent = o.getParentId().orElse(null);
         UUID id = o.getId();
 
@@ -109,11 +109,11 @@ public class FlowIdentifier {
         if (parent == null || !exists(parent)) {
             // initial flow
             ident = "i";
-            flow = new Dataflow("i", "", n, o);
+            flow = new Dataflow("i", "", address, o);
         } else {
             Dataflow pFlow = identifiedFlows.get(parent);
             ident =  pFlow.next();
-            flow = new Dataflow(ident, pFlow.ident, n, o);
+            flow = new Dataflow(ident, pFlow.ident, address, o);
         }
 
         identifiedFlows.put(id, flow);
@@ -152,6 +152,16 @@ public class FlowIdentifier {
         return f == null ? null : f.infoSend;
     }
 
+    void markAborted(NodeAddress address, FlowMap o) {
+        // replace already identified flow with the aborted flow
+        identifiedFlows.computeIfPresent(o.getId(), (id, f) -> {
+            Dataflow ab = new Dataflow(f.ident + "XX", f.infoSend.getParentIdent(), address, o);
+            quasiStaticTree.put(f.ident, ab);
+            quasiStaticTree.put(ab.ident, ab);
+            return ab;
+        });
+    }
+
     UUID toUUID(CharSequence ident) {
         Dataflow f = quasiStaticTree.getValueForExactKey(ident);
         return f == null ? null : f.id;
@@ -159,7 +169,7 @@ public class FlowIdentifier {
 
 
     //=============
-    // Lifecycle
+    // Lifecycle (in progress)
     //=============
 
     enum LifecycleFilter {
@@ -178,8 +188,7 @@ public class FlowIdentifier {
         }
 
         Iterable<Dataflow> lifecycle = quasiStaticTree.getValuesForKeysContainedIn(ident);
-        Deque<Dataflow> flows = new LinkedList<>();
-        lifecycle.forEach(flows::add);
+        List<Dataflow> flows = Iterables.toList(lifecycle);
 
         switch (filter) {
             case NORMAL: {

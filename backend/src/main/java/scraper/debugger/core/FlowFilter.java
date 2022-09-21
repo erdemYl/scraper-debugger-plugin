@@ -50,7 +50,14 @@ public class FlowFilter {
                 }
 
                 // message box
-                ACTIONS.checkLeftMessages(id);
+                ACTIONS.checkLeftMessages(id,
+                        () -> FP.remove(id),
+                        () -> {
+                            FI.markAborted(n.getAddress(), o);
+                            STATE.l.info("Abort");
+                            throw new NodeException("Abort");
+                        }
+                );
 
                 checkException(n, o, false);
                 return;
@@ -78,9 +85,18 @@ public class FlowFilter {
                     if (sendBreak) SERVER.sendBreakpointHit(FI.getFlowDTO(id));
                 });
 
-                while (!FP.exists(id) && !ACTIONS.checkChangeOrAbortMsg(id)) {
-                    // waits until node change or abort
+                // flow waits until abort
+                while (!FP.exists(id)) {
                     STATE.waitOnBreakpoint();
+                    ACTIONS.checkLeftMessages(id,
+                            () -> {},
+                            () -> {
+                                FI.markAborted(n.getAddress(), o);
+                                STATE.l.info("Abort");
+                                throw new NodeException("Abort");
+                            }
+                    );
+                    FP.remove(id);
                 }
 
                 // checks until no exception

@@ -25,22 +25,17 @@ public final class QuasiStaticNode {
     // Circle for tree pane
     final Circle circle;
 
-
     // Tree item for specification view-model
     final TreeItem<QuasiStaticNode> treeItem;
-
 
     // Tree cell for specification view-model
     volatile TreeCell<QuasiStaticNode> treeCell = null;
 
-
     // Whether this node is currently displayed
     private final AtomicBoolean onScreen = new AtomicBoolean(false);
 
-
     // Outgoing lines to other nodes, set during runtime
     private final Map<QuasiStaticNode, Line> outgoingLines = new HashMap<>(4);
-
 
     // In which key this node emits new data, if not, null
     private final String dataStreamKey;
@@ -87,11 +82,11 @@ public final class QuasiStaticNode {
     }
 
     Set<String> arrivals() {
-        return arrivals;
+        return Collections.unmodifiableSet(arrivals);
     }
 
     Set<String> departures() {
-        return departures;
+        return Collections.unmodifiableSet(departures);
     }
 
     boolean departed(CharSequence ident) {

@@ -23,9 +23,11 @@ public class FrontendController {
             if (newVal) {
                 buttonStepSelected.setOpacity(0.3);
                 buttonContinueSelected.setOpacity(0.3);
+                buttonAbortSelected.setOpacity(0.3);
             } else {
                 buttonStepSelected.setOpacity(1);
                 buttonContinueSelected.setOpacity(1);
+                buttonAbortSelected.setOpacity(1);
             }
         });
         logTextArea.textProperty().addListener((value, oldVal, newVal) -> logTextArea.setScrollTop(Double.MAX_VALUE));
@@ -130,6 +132,16 @@ public class FrontendController {
             MODEL.currentSelectedMap().ifPresent(f -> {
                 MODEL.ACTIONS.requestResumeSelected(f.getIdent());
                 MODEL.ACTIONS.requestContinueExecution();
+            });
+        }
+    }
+
+
+    @FXML Pane buttonAbortSelected;
+    @FXML void buttonAbortSelectedClicked() {
+        if (buttonAbortSelected.getOpacity() == 1) {
+            MODEL.currentSelectedMap().ifPresent(f -> {
+                MODEL.ACTIONS.requestAbortSelected(f.getIdent());
             });
         }
     }

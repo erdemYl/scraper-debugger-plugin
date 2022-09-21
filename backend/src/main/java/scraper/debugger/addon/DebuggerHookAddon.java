@@ -34,19 +34,11 @@ import java.util.Optional;
 public class DebuggerHookAddon implements Addon, Hook {
 
     private final Logger l = LoggerFactory.getLogger("Debugger");
-
     public static String bindingIp;
-
     public static int port;
-
     public static DebuggerActions ACTIONS;
-
-
     public static InstanceDTO jobInstance;
-
-
     public static ControlFlowGraphDTO jobCFG;
-
     private static final Map<NodeAddress, NodeType> debuggerNodeTypes = new HashMap<>();
 
     public static NodeType getNodeType(NodeAddress address) {

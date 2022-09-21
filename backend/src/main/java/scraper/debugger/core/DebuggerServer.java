@@ -83,7 +83,6 @@ public final class DebuggerServer extends WebSocketServer {
         } finally {
             lock.unlock();
         }
-        //l.log(Level.WARNING, "Debugger disconnected");
         l.warn("Debugger disconnected");
     }
 

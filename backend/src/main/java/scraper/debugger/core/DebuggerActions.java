@@ -17,7 +17,7 @@ public final class DebuggerActions {
     final Logger l = LoggerFactory.getLogger("Debugger");
 
     // Frontend left-messages
-    private final Set<UUID> leftMessages;
+    private final Map<UUID, Message> leftMessages;
 
     // Debugger components
     private final DebuggerServer SERVER;
@@ -30,16 +30,17 @@ public final class DebuggerActions {
         this.STATE = STATE;
         this.FI = FI;
         this.FP = FP;
-        leftMessages = ConcurrentHashMap.newKeySet();
+        leftMessages = new ConcurrentHashMap<>();
     }
 
-    void checkLeftMessages(UUID id) {
-        if (leftMessages.remove(id))
-            FP.remove(id);
+    private enum Message {
+        STEP, ABORT
     }
 
-    boolean checkChangeOrAbortMsg(UUID id) {
-        return false;
+    void checkLeftMessages(UUID id, Runnable ifStep, Runnable ifAbort) {
+        Message msg = leftMessages.remove(id);
+        if (msg == Message.ABORT) ifAbort.run();
+        if (msg == Message.STEP) ifStep.run();
     }
 
 
@@ -70,19 +71,19 @@ public final class DebuggerActions {
 
     void stepAll() {
         FI.forEachIdentified(id -> {
-            leftMessages.add(id);
+            leftMessages.put(id, Message.STEP);
             FP.create(id);
         });
     }
 
-    void stepSelected(CharSequence ident) {
-        UUID id = FI.toUUID(ident);
-        leftMessages.add(id);
-        FP.create(id);
-    }
-
     void resumeAll() {
         FI.forEachIdentified(FP::create);
+    }
+
+    void stepSelected(CharSequence ident) {
+        UUID id = FI.toUUID(ident);
+        leftMessages.put(id, Message.STEP);
+        FP.create(id);
     }
 
     void resumeSelected(CharSequence ident) {
@@ -91,6 +92,12 @@ public final class DebuggerActions {
 
     void stopSelected(CharSequence ident) {
         FP.remove(FI.toUUID(ident));
+    }
+
+    void abortSelected(CharSequence ident) {
+        UUID id = FI.toUUID(ident);
+        leftMessages.put(id, Message.ABORT);
+        FP.create(id);
     }
 
     void stepAllContinueExecution() {

@@ -14,11 +14,8 @@ import java.util.logging.*;
 public class DebuggerNodeHook implements NodeHook {
 
     private final DebuggerServer SERVER;
-
     private final FlowIdentifier FI;
-
     private final FlowFilter FF;
-
     private final Handler redirect;
 
     DebuggerNodeHook(DebuggerServer SERVER, FlowIdentifier FI, FlowFilter FF) {

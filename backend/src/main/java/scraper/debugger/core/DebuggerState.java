@@ -11,7 +11,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class DebuggerState {
 
-    //final System.Logger l = System.getLogger("DebuggerState");
     final Logger l = LoggerFactory.getLogger("DebuggerState");
 
     // flows will wait on this object
