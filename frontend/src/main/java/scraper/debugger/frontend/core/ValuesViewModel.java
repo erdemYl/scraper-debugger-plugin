@@ -15,6 +15,7 @@ import javafx.util.Callback;
 import scraper.debugger.dto.FlowMapDTO;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
@@ -31,7 +32,7 @@ public class ValuesViewModel {
     private final Label MAP_LABEL;
 
     // Registered columns, not modified once columns registered
-    private final Map<QuasiStaticNode, TableColumn<FlowMapDTO, String>> valueColumns = new HashMap<>();
+    private final Map<QuasiStaticNode, TableColumn<FlowMapDTO, String>> valueColumns = Collections.synchronizedMap(new HashMap<>());
 
     // Static columns
     private final TableColumn<FlowMapDTO, String> waitingColumn = new TableColumn<>();

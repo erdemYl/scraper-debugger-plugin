@@ -24,10 +24,10 @@ with `debug` argument:
 
 # Quickstart - Java
 Execute
-* `mvn verify` for installing distributions to `~/opt/scraperflow/var` folder
+* `mvn verify` for installing debugger to `~/opt/scraperflow/var` folder
 
 or
-* `mvn package` for packaging distributions in the project target folders.
+* `mvn package` for packaging the distribution in the project target folders.
 
 # Debugger Limits
 * Program `cfg` should form a tree.
