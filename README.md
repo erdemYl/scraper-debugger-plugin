@@ -1,4 +1,4 @@
-# Scraper-Debugger-Plugin
+# ScraperFlow-Debugger
 
 [![build](https://img.shields.io/badge/build-maven-lightblue.svg)](https://maven.apache.org/plugins/index.html)
 
@@ -16,15 +16,22 @@ Desktop debugger tool for [ScraperFlow](https://github.com/scraperflow/scraperfl
 
 
 # Quickstart - Debugging
-By using the start script in `~/opt/scraperflow` you can start the debugger via `./scraperflow file.yml debug`
+Use the start script in `~/opt/scraperflow`
+with `debug` argument:
+
+* `./scraperflow file.yml debug`
+
 
 # Quickstart - Java
-* Execute `mvn install`. 
-* This will generate `backend/target` and `frontend/target` folders that contain a `zip` file.
-* Extract jars from `zip` files to `~/opt/scraperflow/var` folder.
+Execute
+* `mvn verify` for installing distributions to `~/opt/scraperflow/var` folder
+
+or
+* `mvn package` for packaging distributions in the project target folders.
 
 # Debugger Limits
 * Program `cfg` should form a tree.
 * Tree should have `height < 20` and  `width < 16`.
 * No imported instances.
 * Nodes should be configured to provide enough threads.
+* Nodes should have distinct service groups.

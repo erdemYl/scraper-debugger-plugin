@@ -11,14 +11,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class DebuggerState {
 
-    //final System.Logger l = System.getLogger("DebuggerState");
     final Logger l = LoggerFactory.getLogger("DebuggerState");
-
-    // flows will wait on this object
-    private final Object breaking = new Object();
-    private final AtomicBoolean start = new AtomicBoolean(false);
-
     private final Set<Address> breakpoints = new HashSet<>();
+
+    // flows will wait on these objects
+    private final Object breaking = new Object();
+    private final Object connLoss = new Object();
+    private final AtomicBoolean start = new AtomicBoolean(false);
 
     public void waitUntilStart() {
         synchronized (start) {
@@ -27,15 +26,16 @@ public final class DebuggerState {
                     l.info("Waiting for debugger to connect");
                     start.wait();
                 }
-            } catch (Exception ignored) {}
+            } catch (InterruptedException ignored) {}
         }
     }
 
     void setStart() {
         synchronized (start) {
-            start.set(true);
-            l.info("Workflow started");
-            start.notifyAll();
+            if (!start.getAndSet(true)) {
+                l.info("Workflow started");
+                start.notifyAll();
+            }
         }
     }
 
@@ -45,6 +45,26 @@ public final class DebuggerState {
     void setContinue() {
         synchronized (breaking) {
             breaking.notifyAll();
+        }
+    }
+
+    /***
+     * All flows that are halt because of connection loss will continue
+     */
+    void setConnected() {
+        synchronized (connLoss) {
+            connLoss.notifyAll();
+        }
+    }
+
+    void waitOnConnectionLoss() {
+        synchronized (connLoss) {
+            try {
+                l.debug("No connection");
+                connLoss.wait();
+            } catch (InterruptedException e) {
+                l.warn("Continuing because interrupt");
+            }
         }
     }
 
@@ -74,8 +94,9 @@ public final class DebuggerState {
     }
 
     void addBreakpoint(String address) {
-        if (breakpoints.add(NodeUtil.addressOf(address)))
+        if (breakpoints.add(NodeUtil.addressOf(address))) {
             l.debug("Breakpoint added: {}", address);
+        }
     }
 
     @Override

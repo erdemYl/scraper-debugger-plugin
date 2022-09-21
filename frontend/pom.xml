@@ -4,90 +4,61 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>frontend</groupId>
-    <artifactId>debugger-frontend</artifactId>
-    <version>1.0.0</version>
+    <parent>
+        <groupId>org.scraper.plugins</groupId>
+        <artifactId>debugger</artifactId>
+        <version>1.0.0</version>
+    </parent>
 
-    <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <maven.compiler.release>11</maven.compiler.release>
-    </properties>
+    <artifactId>debugger-frontend</artifactId>
+    <packaging>jar</packaging>
 
     <dependencies>
-        <dependency>
-            <groupId>backend</groupId>
-            <artifactId>debugger-backend</artifactId>
-            <version>1.0.0</version>
-            <scope>provided</scope>
-        </dependency>
 
-        <dependency>
-            <groupId>scraper.api</groupId>
-            <artifactId>api</artifactId>
-            <version>1.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/api-1.0.0-rc1.jar</systemPath>
-        </dependency>
-
-        <dependency>
-            <groupId>scraper.utils</groupId>
-            <artifactId>utils</artifactId>
-            <version>1.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/utilities-1.0.0-rc1.jar</systemPath>
-        </dependency>
-
+        <!-- javafx deps -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
             <version>17.0.0.1</version>
         </dependency>
-
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-graphics</artifactId>
             <version>17.0.0.1</version>
         </dependency>
-
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>17.0.0.1</version>
         </dependency>
 
+
+        <!-- backend dep -->
         <dependency>
-            <groupId>org.java-websocket</groupId>
-            <artifactId>Java-WebSocket</artifactId>
-            <version>1.5.2</version>
+            <groupId>org.scraper.plugins</groupId>
+            <artifactId>debugger-backend</artifactId>
+            <version>1.0.0</version>
             <scope>provided</scope>
         </dependency>
 
+
+        <!-- scraperflow deps -->
         <dependency>
-            <groupId>com.googlecode.concurrent-trees</groupId>
-            <artifactId>concurrent-trees</artifactId>
-            <version>2.6.1</version>
+            <groupId>com.github.scraperflow.scraperflow</groupId>
+            <artifactId>core</artifactId>
+            <version>master</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>1.7.32</version>
+            <groupId>com.github.scraperflow.scraperflow</groupId>
+            <artifactId>api</artifactId>
+            <version>master</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.32</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.13.0</version>
+            <groupId>com.github.scraperflow.scraperflow</groupId>
+            <artifactId>utilities</artifactId>
+            <version>master</version>
             <scope>provided</scope>
         </dependency>
 
@@ -115,6 +86,28 @@
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>unzipDist</id>
+                        <phase>verify</phase>
+                        <configuration>
+                            <target>
+                                <unzip src="${project.build.directory}/${project.artifactId}-${project.version}-dist.zip"
+                                       dest="${scraperflow.var}">
+                                </unzip>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
                         </goals>
                     </execution>
                 </executions>

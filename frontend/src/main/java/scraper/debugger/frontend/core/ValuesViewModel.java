@@ -133,6 +133,7 @@ public class ValuesViewModel {
         NODES.forEach(node -> {
             node.dataStreamKey().ifPresent(key -> {
                 TableColumn<FlowMapDTO, String> valueColumn = new TableColumn<>(key);
+                valueColumn.setMaxWidth(100);
 
                 // Cell value of this column is the value of data stream key
                 valueColumn.setCellValueFactory(features ->

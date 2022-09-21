@@ -100,14 +100,14 @@ public class FlowIdentifier {
     }
 
     private Dataflow identifyNew(NodeContainer<? extends Node> n, FlowMap o) {
-        UUID parent = o.getParentId().orElse(null);
+        UUID parent = o.getParentId().orElseThrow(() -> new NodeException("Distinct service group needed!"));
         UUID id = o.getId();
 
         CharSequence ident;
         Dataflow flow;
 
-        if (parent == null || !exists(parent)) {
-            // initial flow
+        if (!exists(parent)) {// initial flow
+            FP.create(parent); // parent of initial flow has always permission
             ident = "i";
             flow = new Dataflow("i", "", n, o);
         } else {
@@ -178,7 +178,7 @@ public class FlowIdentifier {
         }
 
         Iterable<Dataflow> lifecycle = quasiStaticTree.getValuesForKeysContainedIn(ident);
-        Deque<Dataflow> flows = new LinkedList<>();
+        List<Dataflow> flows = new LinkedList<>();
         lifecycle.forEach(flows::add);
 
         switch (filter) {

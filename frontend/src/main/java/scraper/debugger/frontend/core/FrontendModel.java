@@ -140,6 +140,9 @@ public class FrontendModel extends FrontendWebSocket {
         });
     }
 
+    @Override
+    protected void takeFinishSignal() {
+    }
 
     void takeSelectedNodes(Deque<QuasiStaticNode> nodes) {
         CURRENT_SELECTED_NODES = nodes;

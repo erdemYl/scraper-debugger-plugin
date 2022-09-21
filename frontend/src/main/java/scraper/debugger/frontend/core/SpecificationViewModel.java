@@ -201,9 +201,10 @@ public class SpecificationViewModel {
                             setOnMouseClicked(e -> {
                                 if (e.isControlDown()) {
                                     if (e.isShiftDown() && !breakpoint(node)) {
-                                        ACTIONS.requestSetBreakpoint(node.toString());
-                                        breakpoints.add(node);
-                                        setStyle(BLUE);
+                                        if (ACTIONS.requestSetBreakpoint(node.toString())) {
+                                            breakpoints.add(node);
+                                            setStyle(BLUE);
+                                        }
                                     }
                                     // do selection until this cell
                                     selectNodesUntil(node);

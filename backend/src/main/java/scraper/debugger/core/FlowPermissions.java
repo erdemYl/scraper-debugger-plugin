@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class FlowPermissions {
 
-    private final Set<UUID> permittedFlows = ConcurrentHashMap.newKeySet(32);
+    private final Set<UUID> permittedFlows = ConcurrentHashMap.newKeySet();
 
     void create(UUID id) {
         permittedFlows.add(id);

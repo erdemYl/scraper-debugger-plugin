@@ -23,6 +23,7 @@ public abstract class FrontendWebSocket extends WebSocketClient {
     private final ExecutorService queryBringer = Executors.newSingleThreadExecutor();
 
     private final ObjectMapper m = new ObjectMapper();
+    private boolean firstConnection = true;
 
     public FrontendWebSocket(String bindingIp, int port) {
         super(URI.create("ws://" + bindingIp + ":" + port));
@@ -41,10 +42,13 @@ public abstract class FrontendWebSocket extends WebSocketClient {
             String type = (String) data.get("type");
             switch (type) {
                 case "specification": {
-                    Map<String, String> dto = (Map<String, String>) data.get("data");
-                    InstanceDTO ins = m.readValue(dto.get("instance"), InstanceDTO.class);
-                    ControlFlowGraphDTO cfg = m.readValue(dto.get("cfg"), ControlFlowGraphDTO.class);
-                    takeSpecification(ins, cfg);
+                    if (firstConnection) {
+                        Map<String, String> dto = (Map<String, String>) data.get("data");
+                        InstanceDTO ins = m.readValue(dto.get("instance"), InstanceDTO.class);
+                        ControlFlowGraphDTO cfg = m.readValue(dto.get("cfg"), ControlFlowGraphDTO.class);
+                        takeSpecification(ins, cfg);
+                        firstConnection = false;
+                    }
                     return;
                 }
                 case "identifiedFlow": {
@@ -68,6 +72,10 @@ public abstract class FrontendWebSocket extends WebSocketClient {
                 case "log": {
                     String log = (String) data.get("data");
                     takeLogMessage(log);
+                    return;
+                }
+                case "finish": {
+                    takeFinishSignal();
                     return;
                 }
                 case "flowLifecycle": {
@@ -116,6 +124,8 @@ public abstract class FrontendWebSocket extends WebSocketClient {
     protected abstract void takeFinishedFlow(FlowDTO f);
 
     protected abstract void takeLogMessage(String log);
+
+    protected abstract void takeFinishSignal();
 
     BlockingQueue<Deque<FlowMapDTO>> getQueryQueue() {
         return queryQueue;
