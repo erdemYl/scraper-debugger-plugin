@@ -6,10 +6,8 @@ import scraper.debugger.core.DebuggerServer;
 import scraper.debugger.core.FlowFilter;
 import scraper.debugger.core.FlowIdentifier;
 
-import java.util.Set;
-import java.util.logging.*;
-
 import static scraper.debugger.addon.DebuggerHookAddon.activeFlows;
+
 
 public class DebuggerNodeHook implements NodeHook {
 
@@ -18,34 +16,10 @@ public class DebuggerNodeHook implements NodeHook {
     private final FlowIdentifier FI;
     private final FlowFilter FF;
 
-    DebuggerNodeHook(Set<Address> addresses, DebuggerServer SERVER, FlowIdentifier FI, FlowFilter FF) {
+    public DebuggerNodeHook( DebuggerServer SERVER, FlowIdentifier FI, FlowFilter FF) {
         this.SERVER = SERVER;
         this.FI = FI;
         this.FF = FF;
-
-        Handler redirect = new Handler() {
-            final Formatter formatter = new SimpleFormatter();
-
-            @Override
-            public void publish(LogRecord record) {
-                SERVER.sendLogMessage(formatter.format(record));
-            }
-
-            @Override
-            public void flush() {
-            }
-
-            @Override
-            public void close() throws SecurityException {
-            }
-        };
-
-        // redirect log to frontend
-        addresses.forEach(adr -> {
-            Logger nl = Logger.getLogger(adr.toString());
-            nl.setUseParentHandlers(false);
-            nl.addHandler(redirect);
-        });
     }
 
     @Override

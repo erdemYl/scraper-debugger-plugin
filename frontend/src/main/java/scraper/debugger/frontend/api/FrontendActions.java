@@ -75,9 +75,7 @@ public final class FrontendActions {
     }
 
     public void requestAbortSelected(CharSequence ident) {
-        executionSender.execute(() -> {
-            if (executionStarted && socket.isOpen()) socket.send(wrap("abortSelected", ident));
-        });
+        event(() -> socket.send(wrap("abortSelected", ident)));
     }
 
 

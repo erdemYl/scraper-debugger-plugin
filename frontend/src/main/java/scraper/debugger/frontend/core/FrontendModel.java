@@ -142,6 +142,7 @@ public class FrontendModel extends FrontendWebSocket {
 
     @Override
     protected void takeFinishSignal() {
+        Platform.runLater(CONTROL::makeButtonsVanish);
     }
 
     void takeSelectedNodes(Deque<QuasiStaticNode> nodes) {

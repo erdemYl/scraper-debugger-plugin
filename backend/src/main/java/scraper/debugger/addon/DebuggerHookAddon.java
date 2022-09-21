@@ -14,6 +14,10 @@ import scraper.utils.StringUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.*;
+import java.util.logging.Formatter;
+
+import static java.util.logging.Logger.getLogger;
 
 @ArgsCommand(
         value = "debug",
@@ -98,6 +102,7 @@ public class DebuggerHookAddon implements Addon, Hook {
             dependencies.addComponent(FlowIdentifier.class);
             dependencies.addComponent(DebuggerActions.class);
             dependencies.addComponent(FlowFilter.class);
+            dependencies.addComponent(DebuggerNodeHook.class);
             ACTIONS = dependencies.get(DebuggerActions.class);
         }
     }
@@ -117,16 +122,25 @@ public class DebuggerHookAddon implements Addon, Hook {
                     jobCFG = new ControlFlowGraphDTO(cfg, adr);
                 } else throw new RuntimeException("Debugger needs an entry node!");
 
-                ins.getRoutes().values().forEach(n -> {
+                Handler redirect = new Handler() {
+                    final Formatter formatter = new SimpleFormatter();
+                    final DebuggerServer SERVER = dependencies.get(DebuggerServer.class);
+                    @Override
+                    public void publish(LogRecord record) { SERVER.sendLogMessage(formatter.format(record)); }
+                    @Override
+                    public void flush() {}
+                    @Override
+                    public void close() throws SecurityException {}
+                };
+
+                ins.getRoutes().forEach((adr, n) -> {
                     debuggerNodeTypes.put(n.getAddress(), NodeType.of(n));
+                    java.util.logging.Logger nl = getLogger(adr.toString());
+                    nl.setUseParentHandlers(false);
+                    nl.addHandler(redirect); // redirect node logs to frontend
                 });
 
-                ins.getHooks().add(
-                        new DebuggerNodeHook(
-                                ins.getRoutes().keySet(),
-                                dependencies.get(DebuggerServer.class),
-                                dependencies.get(FlowIdentifier.class),
-                                dependencies.get(FlowFilter.class)));
+                ins.getHooks().add(dependencies.get(DebuggerNodeHook.class));
             });
 
             dependencies.get(DebuggerServer.class).start();

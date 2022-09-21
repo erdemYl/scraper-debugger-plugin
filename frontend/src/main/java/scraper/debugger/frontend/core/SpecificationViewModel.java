@@ -34,13 +34,13 @@ public class SpecificationViewModel {
     private final Service<Deque<QuasiStaticNode>> SELECTION_SERVICE;
 
     // Newly marked cells
-    private final Map<QuasiStaticNode, TreeCell<QuasiStaticNode>> MARKED_CELLS = new ConcurrentHashMap<>();
+    private final Map<QuasiStaticNode, TreeCell<QuasiStaticNode>> MARKED_CELLS = new HashMap<>();
 
     // Newly marked lines
     private final Collection<Line> MARKED_LINES = new LinkedList<>();
 
     // Defined breakpoints
-    private final Set<QuasiStaticNode> breakpoints = Collections.synchronizedSet(new HashSet<>());
+    private final Set<QuasiStaticNode> breakpoints = ConcurrentHashMap.newKeySet();
 
     // Selected node from user
     private QuasiStaticNode current = null;

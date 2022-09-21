@@ -31,6 +31,14 @@ public class FrontendController {
         logTextArea.textProperty().addListener((value, oldVal, newVal) -> logTextArea.setScrollTop(Double.MAX_VALUE));
     }
 
+    void makeButtonsVanish() {
+        buttonStepAllContinueExecution.setVisible(false);
+        buttonContinueFlowsInNode.setVisible(false);
+        buttonStepSelected.setVisible(false);
+        buttonContinueSelected.setVisible(false);
+        buttonAbortSelected.setVisible(false);
+    }
+
 
     //===========
     // BUTTONS
@@ -146,6 +154,7 @@ public class FrontendController {
         if (buttonAbortSelected.getOpacity() == 1) {
             MODEL.currentSelectedMap().ifPresent(f -> {
                 MODEL.ACTIONS.requestAbortSelected(f.getIdent());
+                MODEL.ACTIONS.requestContinueExecution();
             });
         }
     }

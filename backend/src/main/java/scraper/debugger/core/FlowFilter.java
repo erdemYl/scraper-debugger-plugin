@@ -49,15 +49,15 @@ public class FlowFilter {
                 STATE.waitOnBreakpoint();
             }
 
-                // message box
+            // message box
             ACTIONS.checkLeftMessages(id,
                     () -> FP.remove(id),
                     () -> {
-                            FI.markAborted(n.getAddress(), o);
-                            STATE.l.info("Abort");
-                            throw new NodeException("Abort");
-                        }
-                );
+                        FI.markAborted(n.getAddress(), o);
+                        STATE.l.info("Abort");
+                        throw new NodeException("Abort");
+                    }
+            );
 
             checkException(n, o, false);
             return;

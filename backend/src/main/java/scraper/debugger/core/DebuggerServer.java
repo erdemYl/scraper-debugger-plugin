@@ -41,8 +41,8 @@ public final class DebuggerServer extends WebSocketServer {
             try {
                 l.warn("Shutting down system");
                 stop();
-                STATE.setContinue();
-                STATE.setConnected();
+                STATE.setContinue(); // for
+                STATE.setConnected();// a clean shutdown
                 // Why only slf4j logger prints this?
                 l.warn("Graceful shutdown");
             } catch (InterruptedException e) {
@@ -203,7 +203,7 @@ public final class DebuggerServer extends WebSocketServer {
     /**
      * Wraps with type "finish"
      */
-    public void sendFinishSignal() {
+    void sendFinishSignal() {
         if (debugger != null) {
             debugger.send(wrap("finish", ""));
         }

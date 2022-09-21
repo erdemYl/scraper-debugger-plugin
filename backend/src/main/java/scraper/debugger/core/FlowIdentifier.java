@@ -99,13 +99,13 @@ public class FlowIdentifier {
     }
 
     private Dataflow identifyNew(NodeAddress address, FlowMap o) {
-        UUID parent = o.getParentId().orElse(null);
+        UUID parent = o.getParentId().orElseThrow(() -> new NodeException("Distinct service group needed!"));
         UUID id = o.getId();
 
         CharSequence ident;
         Dataflow flow;
 
-        if (!exists(parent)) {// initial flow
+        if (!exists(parent)) { // initial flow
             FP.create(parent); // parent of initial flow has always permission
             ident = "i";
             flow = new Dataflow("i", "", address, o);
