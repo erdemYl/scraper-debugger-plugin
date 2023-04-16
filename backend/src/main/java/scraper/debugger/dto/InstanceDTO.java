@@ -21,9 +21,7 @@ public class InstanceDTO {
     public Map<String, NodeDTO> getRoutes() { return routes; }
 
     // Default Constructor for JSON Parser
-    public InstanceDTO() {
-
-    }
+    public InstanceDTO() {}
 
     public InstanceDTO(ScrapeInstance i) {
         this.name = i.getName();

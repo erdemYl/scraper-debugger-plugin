@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class DebuggerState {
-
     final Logger l = LoggerFactory.getLogger("DebuggerState");
     private final Set<Address> breakpoints = new HashSet<>();
 
@@ -60,7 +59,7 @@ public final class DebuggerState {
     void waitOnConnectionLoss() {
         synchronized (connLoss) {
             try {
-                l.debug("No connection");
+                l.info("No connection");
                 connLoss.wait();
             } catch (InterruptedException e) {
                 l.warn("Continuing because interrupt");

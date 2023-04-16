@@ -16,9 +16,7 @@ public class FlowPermissions {
         permittedFlows.remove(id);
     }
 
-    void removeAll() {
-        permittedFlows.clear();
-    }
+    void removeAll() { permittedFlows.clear(); }
 
     public boolean exists(UUID id) {
         return permittedFlows.contains(id);

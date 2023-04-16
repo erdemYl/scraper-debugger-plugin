@@ -1,7 +1,10 @@
 package scraper.debugger.core;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.java_websocket.WebSocket;
 import org.java_websocket.drafts.Draft;
 import org.java_websocket.exceptions.InvalidDataException;
@@ -15,8 +18,8 @@ import scraper.debugger.dto.*;
 
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
-import java.util.Deque;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -27,7 +30,7 @@ public final class DebuggerServer extends WebSocketServer {
 
     private final Logger l = LoggerFactory.getLogger("DebuggerServer");
     private final ReentrantLock lock = new ReentrantLock();
-    private final ObjectMapper m = new ObjectMapper();
+    private final ObjectMapper m;
     private volatile WebSocket debugger = null;
     private final DebuggerState STATE;
 
@@ -35,15 +38,17 @@ public final class DebuggerServer extends WebSocketServer {
         super(new InetSocketAddress(DebuggerHookAddon.bindingIp, DebuggerHookAddon.port));
         setReuseAddr(true);
         this.STATE = STATE;
+        m = new ObjectMapper()
+                .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
+                .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);  // all data in flow-map can be serialized
 
+        // clean shutdown
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            Thread.currentThread().setName("shutdown");
             try {
                 l.warn("Shutting down system");
                 stop();
-                STATE.setContinue(); // for
-                STATE.setConnected();// a clean shutdown
-                // Why only slf4j logger prints this?
+                STATE.setContinue();
+                STATE.setConnected();
                 l.warn("Graceful shutdown");
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -66,12 +71,16 @@ public final class DebuggerServer extends WebSocketServer {
     }
 
     @Override
+    public void onCloseInitiated(WebSocket conn, int code, String reason) {
+        super.onCloseInitiated(conn, code, reason);
+    }
+
+    @Override
     public void onOpen(WebSocket conn, ClientHandshake clientHandshake) {
         try {
             lock.lock();
             debugger = conn;
             STATE.setConnected();  // for the case of reconnection
-            Thread.currentThread().setName("channel-b");
             l.info("Debugger connected, sending workflow specification");
             sendSpecification(DebuggerHookAddon.jobInstance, DebuggerHookAddon.jobCFG);
         } finally {
@@ -120,10 +129,7 @@ public final class DebuggerServer extends WebSocketServer {
     }
 
     @Override
-    public void onStart() {
-        Thread.currentThread().setName("selector");
-    }
-
+    public void onStart() {}
 
 
     //=============
@@ -200,27 +206,26 @@ public final class DebuggerServer extends WebSocketServer {
     }
 
 
-    /**
-     * Wraps with type "finish"
-     */
-    void sendFinishSignal() {
+    void sendFlowMap(FlowMapDTO o) {
         if (debugger != null) {
-            debugger.send(wrap("finish", ""));
+            try {
+                debugger.send(wrap("flowMap", Map.of(
+                        "map", m.writeValueAsString(o))
+                ));
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
         }
     }
 
 
-    //=============
-    // QUERY SEND
-    //=============
-
     /**
      * Wraps with type "flowLifecycle"
      */
-    void sendLifecycle(Deque<FlowMapDTO> flows) {
+    void sendLifecycle(List<FlowMapDTO> flows) {
         if (debugger != null) {
             try {
-                Deque<String> written = new LinkedList<>();
+                List<String> written = new LinkedList<>();
                 for (FlowMapDTO o : flows) {
                     written.add(m.writeValueAsString(o));
                 }

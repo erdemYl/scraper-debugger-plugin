@@ -14,8 +14,7 @@ public class FlowDTO {
     public String getNodeAddress() { return nodeAddress; }
 
     // Default constructor for Json parser
-    public FlowDTO() {
-    }
+    public FlowDTO() {}
 
     public FlowDTO(CharSequence ident, CharSequence parentIdent, NodeAddress nodeAddress) {
         this.ident = ident;

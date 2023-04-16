@@ -15,8 +15,7 @@ public class FlowMapDTO {
     public Map<String, ?> getContent() { return content; }
 
     // Default constructor for Json parser
-    public FlowMapDTO() {
-    }
+    public FlowMapDTO() {}
 
     public FlowMapDTO(CharSequence ident, FlowMap o) {
         this.ident = ident;

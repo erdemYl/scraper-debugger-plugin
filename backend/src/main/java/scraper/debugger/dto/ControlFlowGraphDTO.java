@@ -18,9 +18,7 @@ public class ControlFlowGraphDTO {
     public String getStart() { return start; }
 
     // Default Constructor for JSON Parser
-    public ControlFlowGraphDTO() {
-
-    }
+    public ControlFlowGraphDTO() {}
 
     public ControlFlowGraphDTO(ControlFlowGraph cfg, Address start) {
         this.start = start.getRepresentation();

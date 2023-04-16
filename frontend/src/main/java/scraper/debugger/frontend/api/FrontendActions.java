@@ -70,71 +70,24 @@ public final class FrontendActions {
         event(() -> socket.send(wrap("stepAll", "")));
     }
 
-    public void requestStepSelected(CharSequence ident) {
-        event(() -> socket.send(wrap("stepSelected", ident)));
-    }
+    public void requestStepSelected(CharSequence ident) { event(() -> socket.send(wrap("stepSelected", ident))); }
 
-    public void requestAbortSelected(CharSequence ident) {
-        event(() -> socket.send(wrap("abortSelected", ident)));
-    }
+    public void requestAbortSelected(CharSequence ident) { event(() -> socket.send(wrap("abortSelected", ident))); }
 
-
-    //=============
-    // QUERY API
-    //=============
-
-    public enum LifecycleQuery {
-        ONE,
-        WHOLE,
-        TO_EMITTER_NODES,
-        TO_EMITTER_NOT_FORK_NODES,
-        TO_FORK_NODES,
-        NOT_TO_EMITTER_NODES;
-
-        private String toRequestString() {
-            switch (this) {
-                case ONE: {
-                    return "queryOneFlow";
-                }
-                case WHOLE: {
-                    return "queryWholeLifecycle";
-                }
-                case TO_EMITTER_NODES: {
-                    return "queryToEmitterNodes";
-                }
-                case TO_EMITTER_NOT_FORK_NODES: {
-                    return "queryToEmitterNotForkNodes";
-                }
-                case TO_FORK_NODES: {
-                    return "queryToForkNodes";
-                }
-                case NOT_TO_EMITTER_NODES: {
-                    return "queryNotToEmitterNodes";
-                }
-            }
-            return "queryWholeLifecycle";
-        }
-    }
-
-    public Deque<FlowMapDTO> requestLifecycleQuery(LifecycleQuery query, CharSequence ident) {
+    public FlowMapDTO requestFlowMap(CharSequence ident) {
         Future<Deque<FlowMapDTO>> response = querySender.submit(() -> {
             try {
-                socket.send(wrap(query.toRequestString(), ident));
+                socket.send(wrap("requestFlowMap", ident));
                 return socket.getQueryQueue().take();
             } catch (Exception any) {
-                throw new RuntimeException("Cannot request lifecycle query.");
+                throw new RuntimeException("Cannot request flow map.");
             }
         });
-
         try {
-            return response.get();
+            return response.get().pop();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Error during getting response from query.");
         }
-    }
-
-    public FlowMapDTO requestDataflowQuery(CharSequence ident) {
-        return requestLifecycleQuery(LifecycleQuery.ONE, ident).pop();
     }
 
     private boolean event(Runnable run) {

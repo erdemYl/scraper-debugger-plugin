@@ -7,13 +7,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scraper.debugger.addon.DebuggerHookAddon;
-import scraper.debugger.core.FlowIdentifier.LifecycleFilter;
 
 
 @SuppressWarnings("unused") // API convention
 public final class DebuggerActions {
-
-    // Logger with actually intended name
     final Logger l = LoggerFactory.getLogger("Debugger");
 
     // Frontend left-messages
@@ -56,22 +53,20 @@ public final class DebuggerActions {
         STATE.setStart();
     }
 
-    void continueExecution() {
-        STATE.setContinue();
-        // auto send finish signal
-        if (DebuggerHookAddon.workflowFinished()) {
-            STATE.l.info("Workflow finished");
-            SERVER.sendFinishSignal();
-        }
-    }
+    void continueExecution() { STATE.setContinue(); }
 
-    void stopExecution() {
-        FP.removeAll();
-        if (!DebuggerHookAddon.workflowFinished()) STATE.l.info("Workflow stopped");
-    }
+    void stopExecution() { FP.removeAll(); }
 
     void setBreakpoint(CharSequence address) {
         STATE.addBreakpoint(address.toString());
+    }
+
+    void resumeAll() {
+        FI.forEachIdentified(FP::create);
+    }
+
+    void resumeSelected(CharSequence ident) {
+        FP.create(FI.toUUID(ident));
     }
 
     void stepAll() {
@@ -81,18 +76,10 @@ public final class DebuggerActions {
         });
     }
 
-    void resumeAll() {
-        FI.forEachIdentified(FP::create);
-    }
-
     void stepSelected(CharSequence ident) {
         UUID id = FI.toUUID(ident);
         leftMessages.put(id, Message.STEP);
         FP.create(id);
-    }
-
-    void resumeSelected(CharSequence ident) {
-        FP.create(FI.toUUID(ident));
     }
 
     void abortSelected(CharSequence ident) {
@@ -101,35 +88,13 @@ public final class DebuggerActions {
         FP.create(id);
     }
 
-
-    //============
-    // QUERY API
-    //============
-
-    void queryOneFlow(CharSequence ident) {
-        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.ONE, ident));
+    void requestFlowMap(CharSequence ident) {
+        SERVER.sendFlowMap(FI.getFlowMapDTO(ident));
     }
 
-    void queryWholeLifecycle(CharSequence ident) {
-        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.NORMAL, ident));
+    void requestLifecycle(CharSequence ident) {
+        SERVER.sendLifecycle(FI.getLifecycle(ident));
     }
-
-    void queryToEmitterNodes(CharSequence ident) {
-        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.TO_FLOW_EMITTER, ident));
-    }
-
-    void queryToEmitterNotForkNodes(CharSequence ident) {
-        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.TO_FLOW_EMITTER_NOT_FORK, ident));
-    }
-
-    void queryToForkNodes(CharSequence ident) {
-        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.TO_FORK, ident));
-    }
-
-    void queryNotToEmitterNodes(CharSequence ident) {
-        SERVER.sendLifecycle(FI.getLifecycle(LifecycleFilter.NOT_TO_FLOW_EMITTER, ident));
-    }
-
 
     @Override
     public String toString() {

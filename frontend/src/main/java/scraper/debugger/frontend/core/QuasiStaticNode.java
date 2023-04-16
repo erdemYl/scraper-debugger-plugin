@@ -60,16 +60,16 @@ public final class QuasiStaticNode {
             circle.setStroke(Paint.valueOf("#896436"));
         }
         treeItem = new TreeItem<>(this);
-
         nodeAddress = n.getAddress();
         nodeType = n.getType();
-        switch (nodeType) {
-            case "IntRange": {
+
+        switch (nodeType.toLowerCase()) {
+            case "intrange": {
                 dataStreamKey = (String) n.getNodeConfiguration().get("output");
                 return;
             }
-            case "Map":
-            case "MapMap": {
+            case "map":
+            case "mapmap": {
                 dataStreamKey = (String) n.getNodeConfiguration().get("putElement");
                 return;
             }
@@ -77,14 +77,13 @@ public final class QuasiStaticNode {
         }
     }
 
-    void addArrival(CharSequence ident) {
-        arrivals.add(ident.toString().intern());
+    void addArrival(String ident) {
+        arrivals.add(ident);
     }
 
-    void addDeparture(CharSequence ident) {
-        String istr = ident.toString().intern();
-        arrivals.remove(istr);
-        departures.add(istr);
+    void addDeparture(String ident) {
+        arrivals.remove(ident);
+        departures.add(ident);
     }
 
     Set<String> arrivals() {
@@ -96,7 +95,7 @@ public final class QuasiStaticNode {
     }
 
     boolean departed(CharSequence ident) {
-        return departures.contains(ident.toString().intern());
+        return departures.contains(ident.toString());
     }
 
     void addOutgoingLine(QuasiStaticNode other, Line line) {

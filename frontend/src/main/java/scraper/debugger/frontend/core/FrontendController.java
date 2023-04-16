@@ -31,14 +31,6 @@ public class FrontendController {
         logTextArea.textProperty().addListener((value, oldVal, newVal) -> logTextArea.setScrollTop(Double.MAX_VALUE));
     }
 
-    void makeButtonsVanish() {
-        buttonStepAllContinueExecution.setVisible(false);
-        buttonContinueFlowsInNode.setVisible(false);
-        buttonStepSelected.setVisible(false);
-        buttonContinueSelected.setVisible(false);
-        buttonAbortSelected.setVisible(false);
-    }
-
 
     //===========
     // BUTTONS

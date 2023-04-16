@@ -4,17 +4,17 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import scraper.debugger.dto.*;
 
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public abstract class FrontendWebSocket extends WebSocketClient {
-
-    protected final Logger l = LoggerFactory.getLogger("DebuggerClient");
+    
+    protected final Logger l = Logger.getLogger("DebuggerClient");
 
     // Query response queue
     private final BlockingQueue<Deque<FlowMapDTO>> queryQueue = new SynchronousQueue<>(true);
@@ -31,9 +31,7 @@ public abstract class FrontendWebSocket extends WebSocketClient {
     }
 
     @Override
-    public void onOpen(ServerHandshake serverHandshake) {
-        Thread.currentThread().setName("channel-f");
-    }
+    public void onOpen(ServerHandshake serverHandshake) {}
 
     @Override
     public void onMessage(String msg) {
@@ -74,8 +72,17 @@ public abstract class FrontendWebSocket extends WebSocketClient {
                     takeLogMessage(log);
                     return;
                 }
-                case "finish": {
-                    takeFinishSignal();
+                case "flowMap": {
+                    queryBringer.execute(() -> {
+                        try {
+                            Map<String, String> dto = (Map<String, String>) data.get("data");
+                            FlowMapDTO f = m.readValue(dto.get("map"), FlowMapDTO.class);
+                            queryQueue.put(new LinkedList<>(List.of(f)));
+                        } catch (JsonProcessingException | InterruptedException e) {
+                            l.warning("Query error");
+                            queryQueue.add(new LinkedList<>());
+                        }
+                    });
                     return;
                 }
                 case "flowLifecycle": {
@@ -88,8 +95,7 @@ public abstract class FrontendWebSocket extends WebSocketClient {
                             }
                             queryQueue.put(converted);
                         } catch (JsonProcessingException | InterruptedException e) {
-                            l.warn("Query error");
-                            e.printStackTrace();
+                            l.warning("Query error");
                             queryQueue.add(new LinkedList<>());
                         }
                     });
@@ -107,7 +113,7 @@ public abstract class FrontendWebSocket extends WebSocketClient {
 
     @Override
     public void onError(Exception e) {
-        l.error("Connection error: {}", e.getMessage());
+        l.log(Level.SEVERE, "Connection error: {}", e.getMessage());
     }
 
 
@@ -124,8 +130,6 @@ public abstract class FrontendWebSocket extends WebSocketClient {
     protected abstract void takeFinishedFlow(FlowDTO f);
 
     protected abstract void takeLogMessage(String log);
-
-    protected abstract void takeFinishSignal();
 
     BlockingQueue<Deque<FlowMapDTO>> getQueryQueue() {
         return queryQueue;

@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static scraper.debugger.addon.DebuggerHookAddon.getNodeType;
 
@@ -53,9 +54,6 @@ public class FlowIdentifier {
         /** Whether this flow is flowing to a node, which emits new flows */
         final boolean toFlowEmitterNode;
 
-        /** Whether this flow is flowing to a fork node */
-        final boolean toForkNode;
-
         /** Next assignable postfix integer for identification */
         final AtomicInteger postfix = new AtomicInteger(0);
 
@@ -65,7 +63,6 @@ public class FlowIdentifier {
             contentSend = new FlowMapDTO(ident, o);
             this.ident = ident;
             toFlowEmitterNode = getNodeType(address).isFlowEmitter();
-            toForkNode = getNodeType(address).isFork();
         }
 
         CharSequence next() {
@@ -151,6 +148,11 @@ public class FlowIdentifier {
         return f == null ? null : f.infoSend;
     }
 
+    public FlowMapDTO getFlowMapDTO(CharSequence ident) {
+        Dataflow f = quasiStaticTree.getValueForExactKey(ident);
+        return f == null ? null : f.contentSend;
+    }
+
     void markAborted(NodeAddress address, FlowMap o) {
         // replace already identified flow with the aborted flow
         identifiedFlows.computeIfPresent(o.getId(), (id, f) -> {
@@ -166,62 +168,14 @@ public class FlowIdentifier {
         return f == null ? null : f.id;
     }
 
-
-    //=============
-    // Lifecycle
-    //=============
-
-    enum LifecycleFilter {
-        ONE,                       // only one flow
-        NORMAL,                    // all lifecycle
-        TO_FLOW_EMITTER,           // flow to nodes that introduce new flows
-        TO_FLOW_EMITTER_NOT_FORK,  // flow to nodes that introduce new flows except fork nodes
-        TO_FORK,                   // flow to fork node
-        NOT_TO_FLOW_EMITTER        // flow to nodes that do not introduce new flows
-    }
-
-    Deque<FlowMapDTO> getLifecycle(LifecycleFilter filter, CharSequence ident) {
-        if (filter == LifecycleFilter.ONE) {
-            FlowMapDTO f = quasiStaticTree.getValueForExactKey(ident).contentSend;
-            return new LinkedList<>(List.of(f));
-        }
-
+    List<FlowMapDTO> getLifecycle(CharSequence ident) {
         Iterable<Dataflow> lifecycle = quasiStaticTree.getValuesForKeysContainedIn(ident);
-        List<Dataflow> flows = new LinkedList<>();
+        Stream.Builder<Dataflow> flows = Stream.builder();
         lifecycle.forEach(flows::add);
 
-        switch (filter) {
-            case NORMAL: {
-                return flows.stream()
-                        .map(f -> f.contentSend)
-                        .collect(Collectors.toCollection(LinkedList::new));
-            }
-            case TO_FLOW_EMITTER: {
-                return flows.stream()
-                        .filter(f -> f.toFlowEmitterNode)
-                        .map(f -> f.contentSend)
-                        .collect(Collectors.toCollection(LinkedList::new));
-            }
-            case TO_FLOW_EMITTER_NOT_FORK: {
-                return flows.stream()
-                        .filter(f -> f.toFlowEmitterNode && !f.toForkNode)
-                        .map(f -> f.contentSend)
-                        .collect(Collectors.toCollection(LinkedList::new));
-            }
-            case TO_FORK: {
-                return flows.stream()
-                        .filter(f -> f.toForkNode)
-                        .map(f -> f.contentSend)
-                        .collect(Collectors.toCollection(LinkedList::new));
-            }
-            case NOT_TO_FLOW_EMITTER: {
-                return flows.stream()
-                        .filter(f -> !f.toFlowEmitterNode)
-                        .map(f -> f.contentSend)
-                        .collect(Collectors.toCollection(LinkedList::new));
-            }
-        }
-        return new LinkedList<>();
+        return flows.build()
+                .map(f -> f.contentSend)
+                .collect(Collectors.toList());
     }
 
     @Override

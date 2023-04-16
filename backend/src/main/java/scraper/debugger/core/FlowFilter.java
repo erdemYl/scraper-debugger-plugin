@@ -41,7 +41,7 @@ public class FlowFilter {
             String format = step ? "Step" : "Breakpoint";
 
             STATE.waitOnBreakpoint(() -> {
-                STATE.l.info(format);
+                STATE.l.info("{} -> {}", format, n.getAddress().getRepresentation());
                 SERVER.sendBreakpointHit(FI.getFlowDTO(id));
             });
 

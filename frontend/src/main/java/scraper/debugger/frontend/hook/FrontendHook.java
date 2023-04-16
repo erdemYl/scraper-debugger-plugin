@@ -40,4 +40,9 @@ public final class FrontendHook implements Hook {
         // executed after debugger hook
         return 205;
     }
+
+    @Override
+    public String toString() {
+        return "DebuggerFrontend";
+    }
 }

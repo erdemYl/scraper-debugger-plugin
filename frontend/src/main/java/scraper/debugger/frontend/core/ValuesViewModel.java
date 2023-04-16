@@ -15,7 +15,6 @@ import javafx.util.Callback;
 import scraper.debugger.dto.FlowMapDTO;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
@@ -137,9 +136,10 @@ public class ValuesViewModel {
                 valueColumn.setMaxWidth(100);
 
                 // Cell value of this column is the value of data stream key
-                valueColumn.setCellValueFactory(features ->
-                        new SimpleStringProperty(features.getValue().getContent().get(key).toString())
-                );
+                valueColumn.setCellValueFactory(features -> {
+                    Object o = features.getValue().getContent().get(key);
+                    return o == null ? new SimpleStringProperty(null) : new SimpleStringProperty(o.toString());
+                });
                 valueColumns.put(node, valueColumn);
             });
         });
@@ -172,18 +172,16 @@ public class ValuesViewModel {
                                 waitingColumn.setCellValueFactory(features -> {
                                     FlowMapDTO f = features.getValue();
                                     CharSequence ident = f.getIdent();
-                                    if (!node.departed(ident)) {
-                                        return new SimpleStringProperty(ident.toString().intern());
-                                    }
-                                    return new SimpleStringProperty("");
+                                    return !node.departed(ident)
+                                            ? new SimpleStringProperty(ident.toString())
+                                            : new SimpleStringProperty("");
                                 });
                                 processedColumn.setCellValueFactory(features -> {
                                     FlowMapDTO f = features.getValue();
                                     CharSequence ident = f.getIdent();
-                                    if (node.departed(ident)) {
-                                        return new SimpleStringProperty(ident.toString().intern());
-                                    }
-                                    return new SimpleStringProperty("");
+                                    return node.departed(ident)
+                                            ? new SimpleStringProperty(ident.toString())
+                                            : new SimpleStringProperty("");
                                 });
 
                                 // find usable columns for this marking
@@ -200,12 +198,12 @@ public class ValuesViewModel {
 
                                 List<FlowMapDTO> arrivals = node.arrivals()
                                         .parallelStream()
-                                        .map(MODEL.ACTIONS::requestDataflowQuery)
+                                        .map(MODEL.ACTIONS::requestFlowMap)
                                         .collect(Collectors.toList());
 
                                 List<FlowMapDTO> departures = node.departures()
                                         .parallelStream()
-                                        .map(MODEL.ACTIONS::requestDataflowQuery)
+                                        .map(MODEL.ACTIONS::requestFlowMap)
                                         .collect(Collectors.toList());
 
                                 Platform.runLater(() -> {

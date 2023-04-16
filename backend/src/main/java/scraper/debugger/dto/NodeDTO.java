@@ -23,8 +23,7 @@ public class NodeDTO {
     }
 
     // Default Constructor for JSON Parser
-    public NodeDTO() {
-    }
+    public NodeDTO() {}
 
     public NodeDTO(NodeContainer<? extends Node> n) {
         this.nodeConfiguration = n.getNodeConfiguration();

@@ -35,7 +35,7 @@ public class FrontendModel extends FrontendWebSocket {
     private final ValuesViewModel VALUES;
 
     // Actions dependency
-    final FrontendActions ACTIONS;
+    public final FrontendActions ACTIONS;
 
     private Deque<QuasiStaticNode> CURRENT_SELECTED_NODES = null;
 
@@ -102,7 +102,7 @@ public class FrontendModel extends FrontendWebSocket {
     @Override
     protected void takeIdentifiedFlow(FlowDTO f) {
         QuasiStaticNode node;
-        CharSequence ident = f.getIdent();
+        String ident = f.getIdent().toString().intern();
 
         if (ident.equals("i")) {
             node = SPECIFICATION.getRoot();
@@ -129,8 +129,9 @@ public class FrontendModel extends FrontendWebSocket {
 
     @Override
     protected void takeFinishedFlow(FlowDTO f) {
-        QuasiStaticNode node = TREE.getValueForExactKey(f.getIdent());
-        node.addDeparture(f.getIdent());
+        String ident = f.getIdent().toString().intern();
+        QuasiStaticNode node = TREE.getValueForExactKey(ident);
+        node.addDeparture(ident);
     }
 
     @Override
@@ -138,11 +139,6 @@ public class FrontendModel extends FrontendWebSocket {
         Platform.runLater(() -> {
             CONTROL.logTextArea.appendText(log.substring(13));
         });
-    }
-
-    @Override
-    protected void takeFinishSignal() {
-        Platform.runLater(CONTROL::makeButtonsVanish);
     }
 
     void takeSelectedNodes(Deque<QuasiStaticNode> nodes) {

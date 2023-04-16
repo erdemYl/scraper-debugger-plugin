@@ -15,6 +15,9 @@ public class WaitHook implements Hook {
     @Override
     public void execute(@NotNull DIContainer dependencies, @NotNull String[] args, @NotNull Map<ScrapeSpecification, ScrapeInstance> scraper)  {
         if (StringUtil.getArgument(args, "debug") != null) {
+            if (StringUtil.getArgument(args, "-log") != null) {
+                System.exit(0);
+            }
             dependencies.get(DebuggerState.class).waitUntilStart();
         }
     }
